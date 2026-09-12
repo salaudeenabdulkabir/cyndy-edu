@@ -1,0 +1,57 @@
+{
+  "name": "cyndy-portal",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint app lib middleware.ts --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:push": "drizzle-kit push",
+    "test": "node --test tests/*.test.cjs",
+    "check:production": "node scripts/check-production.cjs",
+    "check:secrets": "node scripts/check-secrets.cjs",
+    "build:vercel": "node scripts/build-vercel.cjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.614.0",
+    "@aws-sdk/s3-request-presigner": "^3.614.0",
+    "@clerk/nextjs": "6.39.6",
+    "@hookform/resolvers": "^3.9.0",
+    "@neondatabase/serverless": "^1.1.0",
+    "@upstash/redis": "^1.31.5",
+    "bcryptjs": "^2.4.3",
+    "drizzle-orm": "^0.45.2",
+    "lucide-react": "^0.408.0",
+    "next": "15.5.24",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-hook-form": "^7.52.1",
+    "resend": "^3.4.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.14.12",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "15.5.24",
+    "postcss": "^8.5.23",
+    "tailwindcss": "^3.4.7",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "overrides": {
+    "postcss": "$postcss",
+    "ws": "^8.21.0"
+  }
+}

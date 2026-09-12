@@ -1,0 +1,46 @@
+{
+  "name": "Cyndy Educational Pathways",
+  "short_name": "Cyndy Portal",
+  "description": "Study abroad application management platform. Expert guidance, fast processing, secure documents.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F8F9FC",
+  "theme_color": "#D4A847",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": [
+    "productivity",
+    "education"
+  ],
+  "shortcuts": [
+    {
+      "name": "My Applications",
+      "short_name": "Applications",
+      "description": "View your application status",
+      "url": "/status?utm_source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/icons/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml",
+          "purpose": "any"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}

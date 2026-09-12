@@ -8,11 +8,13 @@ Do not open production registration yet. The code builds and the isolated databa
 
 1. Buy a domain you control. Clerk production cannot use a `.vercel.app` domain. The temporary Vercel address can be used for previews with development keys.
 2. In Vercel, use a commercial-eligible plan. Hobby is for personal/non-commercial use. The connected workspace currently shows Hobby and a billing-address notice; resolve these in your account.
-3. Import `salaudeenabdulkabir/cyndy-edu` as a new Next.js project. Keep the existing sites connected to the older `Cyndy` repository separate.
+3. The dedicated `cyndy-edu` Next.js project has been created in Vercel and linked to `salaudeenabdulkabir/cyndy-edu`. Deployment has not been started. Keep the existing sites connected to the older `Cyndy` repository separate.
 4. Use Node.js 22, install command `npm ci`, and the repository's `npm run build:vercel` build command. Connect your new domain in Project Settings → Domains and add the DNS records Vercel displays.
 5. Keep preview deployment protection enabled. Preview variables must point to isolated services, never the production database or document bucket.
 
 Sources: https://clerk.com/docs/guides/development/deployment/vercel and https://vercel.com/legal/terms
+
+GitHub Actions is also blocked: the first release-check run did not start because GitHub reports the account is locked due to a billing issue. Resolve this in GitHub Settings → Billing, then rerun Release checks. Local checks do not establish that hosted CI has passed.
 
 ## 2. Rotate the exposed credentials
 

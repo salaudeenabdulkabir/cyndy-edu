@@ -5,7 +5,7 @@
 ## Completed in this launch pass
 
 - Removed credential-like values from the environment template and added a secret scanner. No populated environment file is intended for GitHub. The old credentials still require rotation.
-- Initialized Git and connected the user-provided `salaudeenabdulkabir/cyndy-edu` remote.
+- Pushed the launch implementation to `salaudeenabdulkabir/cyndy-edu` on `main`. Created the dedicated `cyndy-edu` Next.js project in Vercel; deployment has not started.
 - Generated a schema baseline and incremental migrations. Created the isolated Neon branch `launch-readiness-2026-09-12`; production was unchanged.
 - Added database uniqueness for client packages, application slots and document types per application. Profile and package initialization handle concurrent creation safely.
 - Added administrator package allocation for one to three applications and client application switching. Package allocation does not itself approve payment.
@@ -22,7 +22,10 @@
 
 ## Verification evidence
 
-- 26 local regression tests passed; lint and TypeScript passed during this pass. A production build passed; final build/browser verification is being recorded before handoff.
+- 26 local regression tests passed; lint and TypeScript passed during this pass. The final production build passed after the mobile contact-page overflow fix.
+- Production-mode HTTP checks returned 200 for the home, contact, policy and health routes, and 401 for anonymous application, admin, worker and notification-job API requests. The checked responses included `X-Content-Type-Options: nosniff`.
+- Inspected the home and contact pages at a 375 px mobile viewport. Fixed the long support email overflowing its container and confirmed the contact document now fits the viewport. This is a limited public-page check, not complete authenticated UI coverage.
+- The publishable-file secret scanner passed for 125 text files. GitHub Actions did not execute any steps: GitHub reports that the account is locked due to a billing issue. Hosted CI remains unverified until billing is resolved and the workflow reruns.
 - Production dependency audit: **0 known vulnerabilities** in `audit-production.json` after removing the unused Trigger SDK. Development-tool advisories are evaluated separately; this is not a claim of zero security risk.
 - The two incremental migrations were applied to the isolated Neon branch. All three uniqueness constraints were verified valid.
 - The approved database regression test created temporary fake records, verified duplicate-slot rejection, notification creation and audit records, and rolled back all fixtures. No test emails or production applicant decisions were made.
@@ -31,7 +34,7 @@
 
 ## Hard launch blockers
 
-1. Vercel workspace is Hobby. This business service needs a commercial-eligible plan; the dashboard also shows a billing-address notice.
+1. Vercel workspace is Hobby. This business service needs a commercial-eligible plan; the dashboard also shows a billing-address notice. Resolve the separate GitHub billing lock so release checks can run.
 2. Clerk production requires a domain the business owns. A `.vercel.app` address can be a development preview, not this app's production authentication domain.
 3. Rotate exposed credentials, configure live Clerk/webhook keys, Redis URL/token, a new private admin PIN hash, and verified email delivery settings.
 4. Verify R2 is private, disable all public bucket access and add a tested malware-scanning/quarantine workflow. File signatures are not malware scanning.

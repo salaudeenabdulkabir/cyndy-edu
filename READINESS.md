@@ -1,4 +1,17 @@
-# Launch readiness — 12 September 2026
+# Launch readiness — 13 September 2026
+
+## Local login and GitLab follow-up
+
+- Verified GitLab import HEAD matches the previous release commit 31221bd. Added the gitlab remote and a Node 22 GitLab CI pipeline; Git transport is currently encountering TLS errors, so publication/hosted CI of this follow-up must be verified separately.
+- Replaced password-only custom staff sign-in with Clerk's supported component, including account switching, server errors and retries. Admin PIN and database authorization remain enforced. Role mismatch now reports a setup error instead of silently continuing toward a redirect loop.
+- Added check:local and a complete screen/account/integration/deployment handbook in README.md.
+- Found simultaneous local Cyndy servers and Next cache corruption. Development, isolated development and production now use separate generated directories. Only the isolated preview remains in use for this verification.
+- Local configuration is missing ADMIN_PIN_HASH and UPSTASH_REDIS_REST_TOKEN. Read-only isolated database checks succeeded and found two client profiles, with no administrator or worker profiles. Those staff accounts still require explicit provisioning.
+- Clerk development publishable/secret keys were verified against matching signing keys. Browser sign-in renders, but a signed-in browser's account lookup has also returned an unavailable response; successful authenticated client/worker/admin workflows are NOT yet verified.
+- 28 regression tests passed. The production build and TypeScript checks passed for the staff login/cache changes. Follow-up safe server logging identifies only the failing stage/error code, never credentials or profile details.
+
+## Previous launch pass
+
 
 **Not yet approved for public launch.** Engineering changes are implemented and undergoing release verification. Production services, credentials and authenticated end-to-end testing still require the steps in [LAUNCH.md](LAUNCH.md).
 

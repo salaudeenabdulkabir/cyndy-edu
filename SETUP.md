@@ -1,12 +1,12 @@
 # Cyndy Educational Pathways — setup
 
-Use Node.js 22 or newer. Run `npm ci`, copy `.env.example` to `.env.local`, and fill the blank values using each service dashboard. Never commit a populated environment file.
+Use Node.js 22 or newer. Run `npm ci`. Only if `.env.local` is missing, copy `.env.example` to `.env.local`; fill blank values using each service dashboard. See [README.md](README.md) for the complete screen and setup handbook. Never commit a populated environment file.
 
 ## Local verification
 
 1. Run `npm run check:secrets`.
-2. Run `npm test`, `npm run typecheck`, and `npm run lint`.
-3. Run `npm run build`.
+2. Run `npm run check:local`, `npm test`, and `npm run lint`.
+3. Run `npm run build`, then `npm run typecheck`.
 4. Run `npm run dev -- --hostname localhost --port 3000`.
 5. Run `npm run check:production` before deploying production. Missing values must be resolved, not bypassed.
 

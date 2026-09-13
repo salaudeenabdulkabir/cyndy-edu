@@ -1,5 +1,9 @@
 # Two-day launch guide — Cyndy Educational Pathways
 
+## GitLab update — 13 September 2026
+
+The user has imported the project to https://gitlab.com/voltage-group1/cyndy-edu and reports connecting it to Vercel. Its HEAD was verified equal to the prior GitHub commit `31221bd`. The local GitLab remote and `.gitlab-ci.yml` are now prepared. See README.md for the complete GitLab/Vercel and login setup guide. GitHub billing need not block this GitLab deployment path; verify GitLab runner availability and the actual Vercel Git connection separately.
+
 ## Current release decision
 
 Do not open production registration yet. The code builds and the isolated database migrations have been tested, but production account setup, credential rotation, private storage verification and full authenticated testing remain required.

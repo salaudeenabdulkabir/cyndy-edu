@@ -62,3 +62,32 @@ test('notification job rejects a forged bearer token before any database query',
   assert.equal((await route.GET(new Request('https://example.com/api/jobs/notifications', { headers:{authorization:'Bearer forged'} }))).status,401)
   delete process.env.CRON_SECRET
 })
+
+test('staff session reports mismatched identity role instead of entering a redirect loop', async () => {
+  const route = load('app/api/auth/session/route.ts', {
+    '@clerk/nextjs/server': { auth: async () => ({ userId: 'test-admin' }), clerkClient: async () => ({ users: { getUser: async () => ({ publicMetadata: { role: 'client' } }) } }) },
+    '@/lib/db': { db: { query: { users: { findFirst: async () => ({ isActive: true, role: 'admin' }) } } } },
+    '@/lib/db/schema': load('lib/db/schema.ts'),
+    'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
+  })
+  const response = await route.GET()
+  assert.equal(response.status, 409)
+  assert.equal((await response.json()).code, 'ROLE_CONFIGURATION_MISMATCH')
+})
+
+test('missing PIN storage does not consume a login attempt', async () => {
+  const previous = process.env.UPSTASH_REDIS_REST_TOKEN
+  delete process.env.UPSTASH_REDIS_REST_TOKEN
+  try {
+    const route = load('app/api/auth/admin-pin/route.ts', {
+      '@clerk/nextjs/server': { auth: async () => ({ userId: 'test-admin', sessionId: 'test-session' }) },
+      '@/lib/db': { db: { query: { users: { findFirst: async () => ({ isActive: true, role: 'admin' }) } } } },
+      '@/lib/db/schema': load('lib/db/schema.ts'),
+      '@/lib/admin-session': { adminRedis: () => { throw new Error('must not consume attempt') } },
+      'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
+    })
+    const response = await route.POST(new Request('http://localhost/api/auth/admin-pin', { method: 'POST', body: JSON.stringify({ pin: '123456' }) }))
+    assert.equal(response.status, 503)
+    assert.match((await response.json()).error, /not configured/)
+  } finally { if (previous !== undefined) process.env.UPSTASH_REDIS_REST_TOKEN = previous }
+})

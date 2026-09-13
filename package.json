@@ -15,7 +15,9 @@
     "test": "node --test tests/*.test.cjs",
     "check:production": "node scripts/check-production.cjs",
     "check:secrets": "node scripts/check-secrets.cjs",
-    "build:vercel": "node scripts/build-vercel.cjs"
+    "build:vercel": "node scripts/build-vercel.cjs",
+    "check:local": "node scripts/check-local.cjs",
+    "dev:staging": "node scripts/start-staging.cjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.614.0",

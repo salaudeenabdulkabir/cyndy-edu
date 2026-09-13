@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const parsed = z.object({ pin: z.string().regex(/^\d{6}$/) }).strict().safeParse(await request.json())
     if (!parsed.success) return NextResponse.json({ error: 'Enter a six-digit PIN', code: 'INVALID_INPUT' }, { status: 400 })
     const hash = process.env.ADMIN_PIN_HASH
-    if (!hash) return NextResponse.json({ error: 'Admin security is not configured. Contact the administrator.', code: 'SECURITY_UNAVAILABLE' }, { status: 503 })
+    if (!hash || !process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) return NextResponse.json({ error: 'Admin security is not configured. The site owner must configure the private PIN hash and security storage.', code: 'SECURITY_UNAVAILABLE' }, { status: 503 })
     const redis = adminRedis()
     const key = `admin-pin-attempts:${userId}`
     // Atomic increment and expiry: parallel attempts cannot bypass the limit.

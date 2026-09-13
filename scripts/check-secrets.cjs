@@ -2,7 +2,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { loadEnvConfig } = require('@next/env')
 loadEnvConfig(process.cwd(), false, { info() {}, error() {} })
-const ignored = new Set(['node_modules', '.next', '.git', '.vercel', '.codex', '.agents', 'coverage', 'mnt'])
+const ignored = new Set(['node_modules', '.next', '.next-dev', '.next-staging', '.git', '.vercel', '.codex', '.agents', 'coverage', 'mnt'])
 const secretValues = Object.entries(process.env).filter(([key, value]) => /SECRET|TOKEN|DATABASE_URL|API_KEY|ADMIN_PIN_HASH/.test(key) && !key.startsWith('NEXT_PUBLIC_') && value?.length > 15)
   .flatMap(([key, value]) => { if (!key.startsWith('DATABASE_URL')) return [value]; try { const password = new URL(value).password; return password.length > 8 ? [value, password] : [] } catch { return [] } }).filter(value => value.length > 15)
 const patterns = [/(?:sk_(?:live|test)_|re_)[A-Za-z0-9_-]{25,}/, /postgres(?:ql)?:\/\/[^\s:]+:[^\s@]{8,}@/, /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/]

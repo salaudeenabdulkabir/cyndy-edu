@@ -17,3 +17,6 @@ mnt/
 *.pem
 *.key
 /public/workbox-*.js
+
+.next-dev/
+.next-staging/

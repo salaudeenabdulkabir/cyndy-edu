@@ -1,3 +1,4 @@
+import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -13,4 +14,4 @@ const nextConfig = {
     ] }, { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-store' }] }]
   },
 }
-export default nextConfig
+export default phase => ({ ...nextConfig, distDir: phase === PHASE_DEVELOPMENT_SERVER ? (process.env.CYNDY_STAGING_PREVIEW === 'true' ? '.next-staging' : '.next-dev') : '.next' })

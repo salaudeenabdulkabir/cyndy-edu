@@ -1,4 +1,14 @@
-# Launch readiness — 13 September 2026
+# Launch readiness — 15 September 2026
+
+## Configuration follow-up — 15 September
+
+- The updated local environment passes all check:local presence/format checks. ADMIN_PIN_HASH is a valid bcrypt hash with cost 12.
+- Redis PING succeeded with the configured REST credentials when IPv4 was preferred. Earlier attempts failed with DNS errors. The isolated local preview launcher now prefers IPv4 unless an explicit DNS order is already configured; hosted production settings are unchanged.
+- A read-only query initially found three active client profiles and no staff profiles on the isolated branch. The user selected an exact Clerk ID for administrator access. Its verified, unlocked Clerk account already had admin metadata; the matching active database client row was updated to admin on the isolated branch only. Production was unchanged.
+- Restarted the local production-mode preview with the updated environment on localhost:3001. Authenticated PIN verification and end-to-end client testing remain pending.
+
+## Earlier verification
+
 
 ## Local login and GitLab follow-up
 

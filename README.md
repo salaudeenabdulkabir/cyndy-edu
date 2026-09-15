@@ -2,7 +2,7 @@
 
 Cyndy is a Next.js application for international education applications, payment-receipt review, document collection, staff processing and applicant updates. This handbook covers the implemented screens, account setup, local development and the GitLab → Vercel deployment path.
 
-**Release status:** local configuration is incomplete. On 13 September 2026, the local admin PIN hash and Upstash REST token were missing. A working sign-in screen is not evidence that payment, uploads or all authenticated workflows have passed. See [READINESS.md](READINESS.md) for verification evidence and [LAUNCH.md](LAUNCH.md) for remaining release requirements.
+**Release status:** local configuration is incomplete. The previously missing local admin PIN hash and Upstash REST token were supplied on 15 September 2026; format checks and Redis PING now pass. The selected administrator role has now been aligned between Clerk and the isolated database; the interactive login/PIN test remains pending. A working sign-in screen is not evidence that payment, uploads or all authenticated workflows have passed. See [READINESS.md](READINESS.md) for verification evidence and [LAUNCH.md](LAUNCH.md) for remaining release requirements.
 
 ## 1. Where everything lives
 
@@ -126,6 +126,8 @@ Do not use placeholder emails from examples as real credentials. There is no uni
 8. Use one server per mode. Development now uses `.next-dev`, the isolated development preview uses `.next-staging`, and production builds use `.next`, avoiding the cache collision found during debugging. Stop dev servers before release verification so generated route declarations remain consistent.
 9. Run `npm test`, `npm run lint`, `npm run build`, then `npm run typecheck`. Typecheck follows build because Next generates route type files.
 10. To inspect the production bundle against the isolated branch, run `node scripts/start-staging.cjs --production` after the build.
+
+The isolated preview launcher prefers IPv4 to work around DNS failures observed on this Windows machine. This does not alter production hosting settings.
 
 Do not mix `localhost` and `127.0.0.1` during a login flow. Cookies belong to their host, and the app checks request origins. Local mode still requires internet connectivity to Clerk, Neon, Upstash and R2.
 

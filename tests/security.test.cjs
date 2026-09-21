@@ -12,6 +12,23 @@ function load(file, mocks = {}) {
 const policy = load('lib/application-policy.ts')
 const uploads = load('lib/upload-validation.ts')
 const { isAllowedRequestOrigin } = load('lib/request-origin.ts')
+test('payment status remains available when receipt storage is unavailable', async () => {
+  const route = load('app/api/payments/receipt/route.ts', {
+    '@clerk/nextjs/server': { auth: async () => ({ userId: 'client' }) },
+    '@/lib/client-profile': {}, '@/lib/upload-limit': {}, '@/lib/upload-validation': uploads,
+    '@/lib/db/schema': load('lib/db/schema.ts'),
+    '@/lib/db': { db: { query: {
+      users: { findFirst: async () => ({ id: 'client', isActive: true, role: 'client' }) },
+      paymentReceipts: { findFirst: async () => ({ id: 'receipt', fileName: 'receipt.pdf', rejectionReason: null, r2Key: 'private-key' }) },
+      clientPackages: { findFirst: async () => ({ paymentConfirmed: true }) },
+    } } },
+    '@/lib/r2': { getSignedDownloadUrl: async () => { throw new Error('Storage unavailable') } },
+    'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
+  })
+  const response = await route.GET()
+  assert.equal(response.status, 200)
+  assert.deepEqual(await response.json(), { paymentConfirmed: true, receipt: { id: 'receipt', fileName: 'receipt.pdf', rejectionReason: null } })
+})
 test('Render HTTPS origin works behind an internal HTTP proxy', () => {
   assert.equal(isAllowedRequestOrigin('https://cyndy-edu-staging.onrender.com', 'http://localhost:10000', ['https://cyndy-edu-staging.onrender.com']), true)
 })

@@ -86,7 +86,8 @@ export async function GET() {
     })
 
     const packageRecord = await db.query.clientPackages.findFirst({ where: eq(clientPackages.clientId, user.id) })
-    return NextResponse.json({ paymentConfirmed: packageRecord?.paymentConfirmed === true, receipt: receipt ? { ...receipt, fileUrl: await getSignedDownloadUrl(receipt.r2Key, 900) } : null })
+    // Status does not download the receipt. Keep it independent of storage availability.
+    return NextResponse.json({ paymentConfirmed: packageRecord?.paymentConfirmed === true, receipt: receipt ? { id: receipt.id, fileName: receipt.fileName, rejectionReason: receipt.rejectionReason } : null })
   } catch (error) {
     serverLog('[GET /api/payments/receipt]', error)
     return NextResponse.json({ error: 'Failed to load receipt status', code: 'RECEIPT_STATUS_FAILED' }, { status: 500 })

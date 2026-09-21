@@ -11,6 +11,22 @@ function load(file, mocks = {}) {
 }
 const policy = load('lib/application-policy.ts')
 const uploads = load('lib/upload-validation.ts')
+const { isAllowedRequestOrigin } = load('lib/request-origin.ts')
+test('Render HTTPS origin works behind an internal HTTP proxy', () => {
+  assert.equal(isAllowedRequestOrigin('https://cyndy-edu-staging.onrender.com', 'http://localhost:10000', ['https://cyndy-edu-staging.onrender.com']), true)
+})
+test('configured origins reject foreign, null, lookalike and internal origins', () => {
+  for (const origin of ['https://evil.example', 'null', 'https://cyndy-edu-staging.onrender.com.evil.example', 'http://localhost:10000', 'http://cyndy-edu-staging.onrender.com', 'https://cyndy-edu-staging.onrender.com:444']) {
+    assert.equal(isAllowedRequestOrigin(origin, 'http://localhost:10000', ['https://cyndy-edu-staging.onrender.com']), false)
+  }
+})
+test('origin policy supports a custom domain and local development', () => {
+  assert.equal(isAllowedRequestOrigin('https://example.com', 'http://localhost:10000', ['https://example.com/']), true)
+  assert.equal(isAllowedRequestOrigin('http://localhost:3001', 'http://localhost:3001', [undefined, '']), true)
+  assert.equal(isAllowedRequestOrigin('https://evil.example', 'http://localhost:3001', []), false)
+  assert.equal(isAllowedRequestOrigin(null, 'http://localhost:3001', []), true)
+  assert.equal(isAllowedRequestOrigin('http://localhost:3001', 'http://localhost:3001', ['invalid']), false)
+})
 for (const field of ['paymentConfirmed', 'assignedWorkerId', 'packageId', 'adminNotes', 'deadline', 'submittedAt', 'formCompletionPct']) {
   test('clients cannot write ' + field, () => assert.equal(policy.clientUpdateSchema.safeParse({ [field]: true }).success, false))
 }

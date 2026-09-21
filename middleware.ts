@@ -1,12 +1,13 @@
 import { clerkMiddleware, createRouteMatcher, clerkClient } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { hasAdminSession } from '@/lib/admin-session'
+import { isAllowedRequestOrigin } from '@/lib/request-origin'
 const publicRoute = createRouteMatcher(['/', '/contact', '/offline.html', '/api/jobs/notifications', '/api/health', '/api/webhooks/clerk', '/sign-in(.*)', '/sign-up(.*)', '/worker/login', '/admin/login', '/privacy-policy', '/terms-of-service', '/manifest.json', '/sw.js', '/icons(.*)'])
 export default clerkMiddleware(async (auth, req) => {
   const path = req.nextUrl.pathname
   if (req.method !== 'GET' && req.method !== 'HEAD' && !path.startsWith('/api/webhooks/')) {
     const origin = req.headers.get('origin')
-    if (origin && origin !== req.nextUrl.origin) return NextResponse.json({ error: 'Cross-origin request rejected', code: 'FORBIDDEN' }, { status: 403 })
+    if (!isAllowedRequestOrigin(origin, req.nextUrl.origin, [process.env.RENDER_EXTERNAL_URL, process.env.NEXT_PUBLIC_APP_URL])) return NextResponse.json({ error: 'Cross-origin request rejected', code: 'FORBIDDEN' }, { status: 403 })
   }
   if (publicRoute(req)) return NextResponse.next()
   const { userId, sessionId } = await auth()

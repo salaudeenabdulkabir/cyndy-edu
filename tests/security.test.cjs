@@ -23,6 +23,23 @@ test('worker failures explain duplicate accounts and unsafe passwords without ex
   assert.match(workerCreationError({ errors: [{ code: 'form_password_pwned' }] }).error, /unique password/)
   assert.equal(workerCreationError(new Error('secret')).error.includes('secret'), false)
 })
+test('worker creation persists an authorized worker and returns it to the administrator', async () => {
+  let identityInput, saved
+  const route = load('app/api/admin/workers/route.ts', {
+    '@/lib/worker-errors': load('lib/worker-errors.ts'),
+    '@/lib/require-admin': { requireAdmin: async () => ({ user: { role: 'admin' } }) },
+    '@clerk/nextjs/server': { clerkClient: async () => ({ users: { createUser: async input => { identityInput = input; return { id: 'clerk-worker' } } } }) },
+    '@/lib/db/schema': load('lib/db/schema.ts'),
+    '@/lib/db': { db: { insert: () => ({ values: value => { saved = value; return { onConflictDoUpdate: () => ({ returning: async () => [{ id: 'worker', email: value.email }] }) } } }) } },
+    'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
+  })
+  const response = await route.POST(new Request('https://example.com/api/admin/workers', { method: 'POST', body: JSON.stringify({ firstName: 'Test', lastName: 'Worker', email: ' Test@Example.com ', password: 'test-only-unique-password' }) }))
+  assert.equal(response.status, 201)
+  assert.equal(identityInput.publicMetadata.role, 'worker')
+  assert.equal(saved.email, 'test@example.com')
+  assert.equal(saved.firstLogin, true)
+  assert.equal((await response.json()).worker.id, 'worker')
+})
 test('catalog deletion requires admin access before any database operation', async () => {
   const route = load('app/api/admin/catalog/route.ts', {
     '@/lib/import-programs': {}, '@/lib/countries': load('lib/countries.ts'),

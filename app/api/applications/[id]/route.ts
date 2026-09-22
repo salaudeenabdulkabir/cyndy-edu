@@ -1,5 +1,5 @@
 import { serverLog } from '@/lib/server-log'
-import { policiesApproved, POLICY_VERSION } from '@/lib/legal'
+import { policiesApproved, stagingSubmissionsEnabled, POLICY_VERSION } from '@/lib/legal'
 import { z } from 'zod'
 import { clientUpdateSchema, staffUpdateSchema, missingApplicationFields, clientApplication, formProgress } from '@/lib/application-policy'
 import { requireAdmin } from '@/lib/require-admin'
@@ -83,8 +83,10 @@ export async function PATCH(
       const documents = await db.query.applicationDocuments.findMany({ where: eq(applicationDocuments.applicationId, app.id) })
       if (required.some(item => (item.global || item.mandatory) && !documents.some(doc => doc.documentTypeId === item.id && ['uploaded', 'verified'].includes(doc.status ?? '')))) missing.push('Required documents')
       if (missing.length) return NextResponse.json({ error: 'Complete: ' + missing.join(', '), code: 'INCOMPLETE_APPLICATION' }, { status: 400 })
-      if (!policiesApproved()) return NextResponse.json({ error: 'Applications will open after our service terms are finalized.', code: 'POLICIES_PENDING' }, { status: 503 })
-      formData.termsVersion = POLICY_VERSION
+      const testSubmission = stagingSubmissionsEnabled()
+      if (!policiesApproved() && !testSubmission) return NextResponse.json({ error: 'Applications will open after our service terms are finalized.', code: 'POLICIES_PENDING' }, { status: 503 })
+      formData.testSubmission = testSubmission
+      formData.termsVersion = testSubmission ? `staging-test:${POLICY_VERSION}` : POLICY_VERSION
       formData.termsAcceptedAt = new Date().toISOString()
       updates.submittedAt = new Date()
     }
@@ -157,7 +159,7 @@ export async function GET(
       }),
     })))
 
-    return NextResponse.json({ ...(role === 'client' ? clientApplication(app) : role === 'worker' ? { ...app, adminNotes: undefined } : app), documents, policiesReady: policiesApproved() })
+    return NextResponse.json({ ...(role === 'client' ? clientApplication(app) : role === 'worker' ? { ...app, adminNotes: undefined } : app), documents, policiesReady: policiesApproved(), testSubmissionsEnabled: stagingSubmissionsEnabled() })
   } catch (error) {
     serverLog('[GET /api/applications/:id]', error)
     return NextResponse.json(

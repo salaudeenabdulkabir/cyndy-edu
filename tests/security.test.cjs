@@ -104,7 +104,7 @@ function routeFixture({ active = true, owner = true, paid = true } = {}) {
     '@clerk/nextjs/server': { auth: async () => ({ userId: 'clerk', sessionId: 'session' }) },
     '@/lib/db': { db }, '@/lib/db/schema': load('lib/db/schema.ts'),
     '@/lib/r2': { getSignedDownloadUrl: async () => '' },
-    '@/lib/application-policy': policy, '@/lib/legal': { policiesApproved: () => false, POLICY_VERSION: 'test' },
+    '@/lib/application-policy': policy, '@/lib/legal': { policiesApproved: () => false, stagingSubmissionsEnabled: () => false, POLICY_VERSION: 'test' },
     '@/lib/require-admin': { requireAdmin: async () => { throw new Error('Unexpected admin access') } },
     'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
   })
@@ -149,3 +149,12 @@ test('submission cannot combine changing a program with bypassing its requiremen
   const response = await fixture.patch({ status: 'submitted', confirmed: true, termsAccepted: true, programId: '123e4567-e89b-42d3-a456-426614174111' })
   assert.equal(response.status, 400); assert.equal(fixture.writes(), 0)
 })
+
+ test('staging submissions cannot open production or enable email delivery', () => {
+ const keys=['STAGING_SUBMISSIONS_ENABLED','RENDER_EXTERNAL_URL','CLERK_SECRET_KEY','EMAIL_NOTIFICATIONS_ENABLED','LEGAL_POLICIES_APPROVED']; const previous=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
+ try {
+ Object.assign(process.env,{STAGING_SUBMISSIONS_ENABLED:'true',RENDER_EXTERNAL_URL:'https://cyndy-edu-staging.onrender.com',CLERK_SECRET_KEY:'sk_test_dummy',EMAIL_NOTIFICATIONS_ENABLED:'false',LEGAL_POLICIES_APPROVED:'false'});
+ const policy=load('lib/legal.ts'); assert.equal(policy.stagingSubmissionsEnabled(),true); assert.equal(policy.policiesApproved(),false);
+ for(const [key,value] of [['STAGING_SUBMISSIONS_ENABLED','false'],['RENDER_EXTERNAL_URL','https://production.example'],['CLERK_SECRET_KEY','sk_live_dummy'],['EMAIL_NOTIFICATIONS_ENABLED','true']]) {const old=process.env[key];process.env[key]=value;assert.equal(policy.stagingSubmissionsEnabled(),false);process.env[key]=old;}
+ } finally { for(const k of keys) {if(previous[k]===undefined) delete process.env[k];else process.env[k]=previous[k];} }
+ })

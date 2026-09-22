@@ -1,4 +1,5 @@
 'use client'
+import { WORLD_COUNTRIES } from '@/lib/countries'
 
 import { useUser } from '@clerk/nextjs'
 import { useForm } from 'react-hook-form'
@@ -57,7 +58,7 @@ export default function PersonalInfo() {
           </label>
         ))}
         <label className="block"><span className="mb-2 block text-sm font-semibold text-text-secondary">Gender <span className="text-danger">★</span></span><select {...register('gender', { onChange: () => setIsDirty(true) })} className={inputClass}><option value="">Select gender</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option><option value="prefer-not">Prefer not to say</option></select>{errors.gender?.message && <span className="mt-1 block text-xs text-danger">{errors.gender.message}</span>}</label>
-        <label className="block"><span className="mb-2 block text-sm font-semibold text-text-secondary">Country <span className="text-danger">★</span></span><select {...register('country', { onChange: () => setIsDirty(true) })} className={inputClass}><option value="">Select country</option><option value="NG">Nigeria</option><option value="GH">Ghana</option><option value="KE">Kenya</option><option value="other">Other</option></select>{errors.country?.message && <span className="mt-1 block text-xs text-danger">{errors.country.message}</span>}</label>
+        <label className="block"><span className="mb-2 block text-sm font-semibold text-text-secondary">Country <span className="text-danger">★</span></span><select {...register('country', { onChange: () => setIsDirty(true) })} className={inputClass}><option value="">Select country</option>{WORLD_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.name}</option>)}<option value="other">Other</option></select>{errors.country?.message && <span className="mt-1 block text-xs text-danger">{errors.country.message}</span>}</label>
       </div>
     </div>
   )

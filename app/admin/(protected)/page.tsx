@@ -57,7 +57,8 @@ export default function AdminDashboard() {
   const [updatingApplicationId, setUpdatingApplicationId] = useState('')
   const [adminWorkers, setAdminWorkers] = useState<AdminWorker[]>([])
   const [workerLoading, setWorkerLoading] = useState(false)
-  const [workerForm, setWorkerForm] = useState({ firstName: '', lastName: '', email: '', password: '' })
+  const [workerSuccess, setWorkerSuccess] = useState('')
+  const [workerForm, setWorkerForm] = useState({ firstName: '', lastName: '', email: '', username: '', password: '' })
   const [workerSaving, setWorkerSaving] = useState(false)
   const [clients, setClients] = useState<AdminClient[]>([])
   const [clientLoading, setClientLoading] = useState(false)
@@ -154,13 +155,14 @@ export default function AdminDashboard() {
     const saveWorker = async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault()
       setWorkerSaving(true)
+      setWorkerSuccess('')
       setError('')
       try {
         const response = await fetch('/api/admin/workers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(workerForm) })
         const body = await response.json() as { worker?: AdminWorker; temporaryPassword?: string; error?: string }
         if (!response.ok || !body.worker) throw new Error(body.error ?? 'Failed to create worker')
-        window.alert(`Worker created. Temporary password: ${body.temporaryPassword ?? workerForm.password}`)
-        setWorkerForm({ firstName: '', lastName: '', email: '', password: '' })
+        setWorkerSuccess('Worker account created. Share the temporary password privately; they must change it on first sign-in.')
+        setWorkerForm({ firstName: '', lastName: '', email: '', username: '', password: '' })
         await loadWorkers()
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : 'Failed to create worker')
@@ -226,13 +228,17 @@ export default function AdminDashboard() {
           {clientLoading ? <div className="mt-6 flex items-center justify-center border border-border bg-white py-16 text-text-secondary"><LoaderCircle className="mr-2 animate-spin" size={18} /> Loading clients...</div> : clients.length === 0 ? <div className="mt-6 border border-border bg-white py-16 text-center"><Users className="mx-auto text-text-secondary" size={32} /><h2 className="mt-4 font-heading text-2xl font-bold text-navy">No clients found</h2><p className="mt-2 text-sm text-text-secondary">Registered clients will appear here.</p></div> : <div className="mt-6 overflow-x-auto border border-border bg-white"><table className="min-w-[850px] w-full text-left"><thead className="border-b border-border bg-gray-50 text-xs uppercase tracking-wide text-text-secondary"><tr><th className="px-4 py-3">Client</th><th className="px-4 py-3">Package</th><th className="px-4 py-3">Applications</th><th className="px-4 py-3">Payment</th><th className="px-4 py-3">Joined</th></tr></thead><tbody>{clients.map((client) => <tr key={`${client.id}-${client.packageId ?? 'none'}`} className="border-b border-border last:border-0"><td className="px-4 py-4 text-sm font-semibold text-navy">{client.firstName} {client.lastName}<p className="font-normal text-text-secondary">{client.email}</p></td><td className="px-4 py-4 text-sm text-text-secondary">{client.totalApplications ?? 0} applications{client.amountPaid ? <p>{client.currency ?? ''} {client.amountPaid}</p> : null}<PackageEditor clientId={client.id} initialTotal={client.totalApplications ?? 1} onSaved={() => void loadClients()} /></td><td className="px-4 py-4 text-sm text-text-secondary">{client.applicationCount}</td><td className={`px-4 py-4 text-sm font-semibold ${client.paymentConfirmed ? 'text-success' : 'text-warning'}`}>{client.paymentConfirmed ? 'Confirmed' : 'Pending'}</td><td className="px-4 py-4 text-sm text-text-secondary">{client.joinedAt ? new Date(client.joinedAt).toLocaleDateString() : '—'}</td></tr>)}</tbody></table></div>}
         </section> : activeTab === 'workers' ? <section>
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-gold">Team</p><h1 className="mt-2 font-heading text-4xl font-bold text-navy">Worker management</h1><p className="mt-2 text-text-secondary">Manage access and workload for your application team.</p>
-          <form onSubmit={saveWorker} className="mt-8 grid gap-3 rounded-xl border border-border bg-white p-5 sm:grid-cols-2 lg:grid-cols-5">
+          {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-4 text-sm text-danger">{error}</p>}
+          {workerSuccess && <p role="status" className="mt-4 rounded-lg bg-green-50 p-4 text-sm text-success">{workerSuccess}</p>}
+          <form onSubmit={saveWorker} className="mt-8 grid gap-3 rounded-xl border border-border bg-white p-5 sm:grid-cols-2 lg:grid-cols-3">
             <input required value={workerForm.firstName} onChange={(event) => setWorkerForm({ ...workerForm, firstName: event.target.value })} placeholder="First name" aria-label="Worker first name" />
             <input required value={workerForm.lastName} onChange={(event) => setWorkerForm({ ...workerForm, lastName: event.target.value })} placeholder="Last name" aria-label="Worker last name" />
             <input required type="email" value={workerForm.email} onChange={(event) => setWorkerForm({ ...workerForm, email: event.target.value })} placeholder="Email" aria-label="Worker email" />
+            <input value={workerForm.username} onChange={(event) => setWorkerForm({ ...workerForm, username: event.target.value })} placeholder="Username (if required)" aria-label="Worker username" autoComplete="off" />
             <input required minLength={8} type="password" value={workerForm.password} onChange={(event) => setWorkerForm({ ...workerForm, password: event.target.value })} placeholder="Temporary password" aria-label="Temporary password" />
             <button disabled={workerSaving} className="flex items-center justify-center gap-2 bg-gold px-4 py-3 font-semibold text-white disabled:opacity-50"><UserPlus size={16} />{workerSaving ? 'Creating...' : 'Add worker'}</button>
           </form>
+          <p className="mt-2 text-sm text-text-secondary">Use a new email address and a unique temporary password of at least 8 characters. Add a username only if your sign-in settings require one.</p>
           {workerLoading ? <div className="mt-6 flex items-center justify-center border border-border bg-white py-16 text-text-secondary"><LoaderCircle className="mr-2 animate-spin" size={18} /> Loading workers...</div> : adminWorkers.length === 0 ? <div className="mt-6 border border-border bg-white py-16 text-center"><UserPlus className="mx-auto text-text-secondary" size={32} /><h2 className="mt-4 font-heading text-2xl font-bold text-navy">No workers yet</h2><p className="mt-2 text-sm text-text-secondary">Add your first worker above.</p></div> : <div className="mt-6 overflow-x-auto border border-border bg-white"><table className="min-w-[760px] w-full text-left"><thead className="border-b border-border bg-gray-50 text-xs uppercase tracking-wide text-text-secondary"><tr><th className="px-4 py-3">Worker</th><th className="px-4 py-3">Active applications</th><th className="px-4 py-3">Last seen</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Action</th></tr></thead><tbody>{adminWorkers.map((worker) => <tr key={worker.id} className="border-b border-border last:border-0"><td className="px-4 py-4 text-sm font-semibold text-navy">{worker.firstName} {worker.lastName}<p className="font-normal text-text-secondary">{worker.email}</p></td><td className="px-4 py-4 text-sm text-text-secondary">{worker.activeApplications}</td><td className="px-4 py-4 text-sm text-text-secondary">{worker.lastSeen ? new Date(worker.lastSeen).toLocaleString() : 'Not seen yet'}</td><td className="px-4 py-4 text-sm font-semibold">{worker.isActive ? 'Active' : 'Deactivated'}</td><td className="px-4 py-4"><button type="button" onClick={() => void toggleWorker(worker)} className="border border-border px-3 py-2 text-xs font-semibold text-navy">{worker.isActive ? 'Deactivate' : 'Activate'}</button></td></tr>)}</tbody></table></div>}
         </section> : activeTab === 'applications' ? <section>
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-gold">Applications</p>

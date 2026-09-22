@@ -1,4 +1,5 @@
 import { serverLog } from '@/lib/server-log'
+import { workerCreationError } from '@/lib/worker-errors'
 import { requireAdmin } from '@/lib/require-admin'
 import { clerkClient } from '@clerk/nextjs/server'
 import { and, count, eq } from 'drizzle-orm'
@@ -10,7 +11,8 @@ import { applications, users } from '@/lib/db/schema'
 const createSchema = z.object({
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
-  email: z.string().email(),
+  email: z.string().trim().email().transform(value => value.toLowerCase()),
+  username: z.string().trim().min(4).max(64).regex(/^[a-zA-Z0-9_]+$/).optional().or(z.literal('')),
   password: z.string().min(8).max(100),
 })
 const updateSchema = z.object({ id: z.string().uuid(), isActive: z.boolean() })
@@ -41,6 +43,7 @@ export async function POST(request: Request) {
     const clerkUser = await (await clerkClient()).users.createUser({
       emailAddress: [parsed.data.email],
       password: parsed.data.password,
+      ...(parsed.data.username ? { username: parsed.data.username } : {}),
       firstName: parsed.data.firstName,
       lastName: parsed.data.lastName,
       publicMetadata: { role: 'worker' },
@@ -52,7 +55,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ worker }, { status: 201 })
   } catch (error) {
     serverLog('[POST /api/admin/workers]', error)
-    return NextResponse.json({ error: 'Failed to create worker', code: 'WORKER_CREATE_FAILED' }, { status: 500 })
+    const failure = workerCreationError(error)
+    return NextResponse.json({ error: failure.error, code: 'WORKER_CREATE_FAILED' }, { status: failure.status })
   }
 }
 

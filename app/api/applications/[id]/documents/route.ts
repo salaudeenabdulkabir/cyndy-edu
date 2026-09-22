@@ -9,7 +9,7 @@ import { and, eq, or } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { applicationDocuments, applications, documentTypes, programDocuments, users } from '@/lib/db/schema'
-import { buildDocumentKey, deleteFile, getSignedDownloadUrl, r2Client } from '@/lib/r2'
+import { buildDocumentKey, deleteFile, getSignedDownloadUrl, isStorageConfigured, r2Client } from '@/lib/r2'
 
 import { ensureClientProfile as getUser } from '@/lib/client-profile'
 
@@ -64,6 +64,7 @@ export async function POST(request: Request, { params: paramsPromise }: { params
     if (!user?.isActive || user.role !== 'client' || !application || application.clientId !== user.id) return NextResponse.json({ error: 'Application not found', code: 'APPLICATION_NOT_FOUND' }, { status: 404 })
 
     if (!application.paymentConfirmed) return NextResponse.json({ error: 'Payment confirmation required', code: 'PAYMENT_REQUIRED' }, { status: 403 })
+    if (!isStorageConfigured()) return NextResponse.json({ error: 'Document uploads are not ready yet. Please contact support; your application is saved.', code: 'STORAGE_NOT_CONFIGURED' }, { status: 503 })
     const formData = await request.formData()
     const file = formData.get('file')
     const documentTypeId = formData.get('documentTypeId')

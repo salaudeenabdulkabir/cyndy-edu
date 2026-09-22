@@ -13,6 +13,10 @@ export const r2Client = new S3Client({
 
 const BUCKET = process.env.CLOUDFLARE_R2_BUCKET_NAME!
 
+export function isStorageConfigured() {
+  return Boolean(process.env.CLOUDFLARE_R2_ACCOUNT_ID && process.env.CLOUDFLARE_R2_ACCESS_KEY_ID && process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY && process.env.CLOUDFLARE_R2_BUCKET_NAME)
+}
+
 export async function getSignedDownloadUrl(key: string, expiresInSeconds = 3600) {
   const command = new GetObjectCommand({ Bucket: BUCKET, Key: key })
   return getSignedUrl(r2Client, command, { expiresIn: expiresInSeconds })

@@ -11,6 +11,27 @@ function load(file, mocks = {}) {
 }
 const policy = load('lib/application-policy.ts')
 const uploads = load('lib/upload-validation.ts')
+test('worldwide country choices have unique codes and include every region', () => {
+  const { WORLD_COUNTRIES } = load('lib/countries.ts')
+  assert.equal(WORLD_COUNTRIES.length, 249)
+  assert.equal(new Set(WORLD_COUNTRIES.map(item => item.code)).size, 249)
+  for (const code of ['NG', 'GH', 'KE', 'US', 'BR', 'JP', 'AU', 'GB', 'ZA', 'CA', 'IN']) assert.ok(WORLD_COUNTRIES.some(item => item.code === code))
+})
+test('worker failures explain duplicate accounts and unsafe passwords without exposing details', () => {
+  const { workerCreationError } = load('lib/worker-errors.ts')
+  assert.equal(workerCreationError({ errors: [{ code: 'form_identifier_exists' }] }).status, 409)
+  assert.match(workerCreationError({ errors: [{ code: 'form_password_pwned' }] }).error, /unique password/)
+  assert.equal(workerCreationError(new Error('secret')).error.includes('secret'), false)
+})
+test('catalog deletion requires admin access before any database operation', async () => {
+  const route = load('app/api/admin/catalog/route.ts', {
+    '@/lib/import-programs': {}, '@/lib/countries': load('lib/countries.ts'),
+    '@/lib/require-admin': { requireAdmin: async () => ({ response: Response.json({ error: 'Forbidden' }, { status: 403 }) }) },
+    '@/lib/db': { db: {} }, '@/lib/db/schema': load('lib/db/schema.ts'),
+    'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
+  })
+  assert.equal((await route.DELETE(new Request('https://example.com/api/admin/catalog', { method: 'DELETE' }))).status, 403)
+})
 const { isAllowedRequestOrigin } = load('lib/request-origin.ts')
 test('payment status remains available when receipt storage is unavailable', async () => {
   const route = load('app/api/payments/receipt/route.ts', {

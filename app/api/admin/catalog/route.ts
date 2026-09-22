@@ -1,7 +1,8 @@
 import { importPrograms } from '@/lib/import-programs'
 import { serverLog } from '@/lib/server-log'
 import { requireAdmin } from '@/lib/require-admin'
-import { asc, eq } from 'drizzle-orm'
+import { asc, eq, sql } from 'drizzle-orm'
+import { WORLD_COUNTRIES } from '@/lib/countries'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
@@ -9,7 +10,7 @@ import { countries, programs, universities } from '@/lib/db/schema'
 
 const createSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('country'), name: z.string().trim().min(2), code: z.string().trim().min(2).max(3), flagEmoji: z.string().trim().min(1).max(8) }),
-  z.object({ type: z.literal('university'), countryId: z.string().uuid(), name: z.string().trim().min(2), universityType: z.string().trim().min(2), location: z.string().trim().min(2), website: z.string().url().optional().or(z.literal('')) }),
+  z.object({ type: z.literal('university'), countryId: z.string().uuid().optional(), countryCode: z.string().length(2).optional(), name: z.string().trim().min(2), universityType: z.string().trim().min(2), location: z.string().trim().min(2), website: z.string().url().optional().or(z.literal('')) }),
   z.object({ type: z.literal('program'), universityId: z.string().uuid(), title: z.string().trim().min(2), level: z.string().trim().min(2), deadline: z.string().date().optional().or(z.literal('')), scholarshipAvailable: z.boolean().default(false) }),
   z.object({ type: z.literal('bulk_programs'), universityId: z.string().uuid(), programs: z.array(z.object({ title: z.string().trim().min(2), level: z.string().trim().min(1), deadline: z.string().date().optional().or(z.literal('')) })).min(1).max(500) }),
 ])
@@ -91,8 +92,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ id: country.id }, { status: 201 })
     }
     if (parsed.data.type === 'university') {
+      let countryId = parsed.data.countryId
+      const countryCode = parsed.data.countryCode
+      if (!countryId) {
+        const entry = WORLD_COUNTRIES.find(item => item.code === countryCode)
+        if (!entry) return NextResponse.json({ error: 'Select a country', code: 'INVALID_INPUT' }, { status: 400 })
+        const [created] = await db.insert(countries).values({ ...entry, isActive: true }).onConflictDoNothing({ target: countries.code }).returning({ id: countries.id })
+        countryId = created?.id ?? (await db.query.countries.findFirst({ where: eq(countries.code, entry.code) }))?.id
+      }
+      if (!countryId) return NextResponse.json({ error: 'Unable to resolve country' }, { status: 500 })
       const [university] = await db.insert(universities).values({
-        countryId: parsed.data.countryId,
+        countryId,
         name: parsed.data.name,
         type: parsed.data.universityType,
         location: parsed.data.location,
@@ -115,6 +125,24 @@ export async function POST(request: Request) {
   } catch (error) {
     serverLog('[POST /api/admin/catalog]', error)
     return NextResponse.json({ error: 'Failed to create catalog item', code: 'CATALOG_CREATE_FAILED' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: Request) {
+  const access = await requireAdmin()
+  if ('response' in access) return access.response
+  const parsed = z.object({ type: z.enum(['university', 'program']), id: z.string().uuid() }).safeParse(await request.json().catch(() => null))
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid catalog item' }, { status: 400 })
+  try {
+    const { id, type } = parsed.data
+    const result = type === 'program'
+      ? await db.execute(sql`DELETE FROM programs WHERE id = ${id} AND NOT EXISTS (SELECT 1 FROM applications WHERE program_id = ${id}) AND NOT EXISTS (SELECT 1 FROM custom_course_suggestions WHERE promoted_to_program = ${id}) RETURNING id`)
+      : await db.execute(sql`DELETE FROM universities WHERE id = ${id} AND NOT EXISTS (SELECT 1 FROM programs WHERE university_id = ${id}) AND NOT EXISTS (SELECT 1 FROM custom_course_suggestions WHERE university_id = ${id}) RETURNING id`)
+    if (!result.rows.length) return NextResponse.json({ error: type === 'program' ? 'This program is in use or was already deleted. Hide it instead if it is in use.' : 'Delete unused programs first. Schools linked to course requests cannot be deleted; close their intake instead.' }, { status: 409 })
+    return NextResponse.json({ deleted: true })
+  } catch (error) {
+    serverLog('[DELETE /api/admin/catalog]', error)
+    return NextResponse.json({ error: 'Unable to delete this item. It may still be in use.' }, { status: 409 })
   }
 }
 

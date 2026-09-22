@@ -4,6 +4,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 export const r2Client = new S3Client({
   region: 'auto',
+  forcePathStyle: true,
   endpoint: `https://${process.env.CLOUDFLARE_R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
     accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID!,

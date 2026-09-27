@@ -1,8 +1,16 @@
 // Interactive only: the PIN is never printed, saved, or passed as a command argument.
 const bcrypt = require('bcryptjs')
 if (!process.stdin.isTTY) { console.error('Run this in your own interactive terminal.'); process.exit(1) }
+const verifyOnly = process.argv.includes('--verify')
+if (verifyOnly) {
+  require('@next/env').loadEnvConfig(process.cwd(), true, { info() {}, error() {} })
+  if (!/^\$2[aby]\$(0[4-9]|[12]\d|3[01])\$[./A-Za-z0-9]{53}$/.test(process.env.ADMIN_PIN_HASH || '')) {
+    console.error('Local ADMIN_PIN_HASH is missing or invalid. No PIN was requested.')
+    process.exit(1)
+  }
+}
 let input = '', first = ''
-process.stdout.write('Choose a NEW six-digit admin PIN (hidden): ')
+process.stdout.write(verifyOnly ? 'Enter your current admin PIN to check the local configuration (hidden): ' : 'Choose a NEW six-digit admin PIN (hidden): ')
 process.stdin.setRawMode(true)
 process.stdin.resume()
 process.stdin.setEncoding('utf8')
@@ -12,6 +20,13 @@ process.stdin.on('data', async chunk => {
     if (char === '\u007f' || char === '\b') { input = input.slice(0, -1); continue }
     if (char === '\r' || char === '\n') {
       if (!/^\d{6}$/.test(input)) { input = ''; process.stdout.write('\nUse exactly six digits. Try again (hidden): '); continue }
+      if (verifyOnly) {
+        process.stdin.setRawMode(false); process.stdin.pause()
+        const matches = await bcrypt.compare(input, process.env.ADMIN_PIN_HASH)
+        input = ''
+        process.stdout.write(matches ? '\nMATCH: Your PIN matches the local configuration.\n' : '\nNO MATCH: The local configuration contains a hash for a different PIN.\n')
+        process.exit(matches ? 0 : 1)
+      }
       if (!first) { first = input; input = ''; process.stdout.write('\nConfirm PIN (hidden): '); continue }
       if (first !== input) { first = ''; input = ''; process.stdout.write('\nPINs did not match. Start again (hidden): '); continue }
       process.stdin.setRawMode(false); process.stdin.pause()

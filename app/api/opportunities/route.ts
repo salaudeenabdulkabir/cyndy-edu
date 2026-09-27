@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { serverLog } from '@/lib/server-log'
 import { NextResponse } from 'next/server'
-import { and, eq, or, sql } from 'drizzle-orm'
+import { and, eq, or, sql, isNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { opportunityPrices, programs, universities, countries, applicationOrders, documentTypes, programDocuments } from '@/lib/db/schema'
 import { ensureClientProfile } from '@/lib/client-profile'
@@ -14,11 +14,11 @@ export async function GET() {
     const client = await ensureClientProfile(userId)
     if (!client.isActive || client.role !== 'client') return NextResponse.json({ error: 'Client access required' }, { status: 403 })
     const offers = await db.select({ id: programs.id, title: programs.title, level: programs.level, deadline: programs.deadline,
-      scholarship: programs.scholarshipAvailable, school: universities.name, destination: countries.name,
+      description: programs.description, scholarship: programs.scholarshipAvailable, school: sql<string>`coalesce(nullif(${programs.schoolLabel}, ''), ${universities.name}, '')`, destination: sql<string>`coalesce(nullif(${programs.destinationLabel}, ''), ${countries.name}, 'Multiple destinations / see details')`,
       priceId: opportunityPrices.id, payerCountry: opportunityPrices.payerCountry, amount: opportunityPrices.amount, currency: opportunityPrices.currency,
-    }).from(programs).innerJoin(universities, eq(universities.id, programs.universityId)).innerJoin(countries, eq(countries.id, universities.countryId))
+    }).from(programs).leftJoin(universities, eq(universities.id, programs.universityId)).leftJoin(countries, eq(countries.id, universities.countryId))
       .leftJoin(opportunityPrices, and(eq(opportunityPrices.programId, programs.id), eq(opportunityPrices.active, true)))
-      .where(and(eq(programs.isActive, true), eq(universities.isAcceptingApplications, true), eq(countries.isActive, true), or(sql`${programs.deadline} IS NULL`, sql`${programs.deadline} >= CURRENT_DATE`)))
+      .where(and(eq(programs.isActive, true), eq(programs.opportunityStatus, 'open'), or(isNull(programs.universityId), and(eq(universities.isAcceptingApplications, true), eq(countries.isActive, true))), or(sql`${programs.deadline} IS NULL`, sql`${programs.deadline} >= CURRENT_DATE`)))
     const orders = await db.select({ applicationId: applicationOrders.applicationId, amount: applicationOrders.amount, currency: applicationOrders.currency, status: applicationOrders.status }).from(applicationOrders).where(eq(applicationOrders.clientId, client.id))
     const requirements = await db.select({name:documentTypes.name,description:documentTypes.description,global:documentTypes.isGlobal,programId:programDocuments.programId,mandatory:programDocuments.isMandatory}).from(documentTypes).leftJoin(programDocuments,eq(programDocuments.documentTypeId,documentTypes.id))
     return NextResponse.json({ offers, orders, requirements })

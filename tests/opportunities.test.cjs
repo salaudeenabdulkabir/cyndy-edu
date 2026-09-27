@@ -6,6 +6,28 @@ const policy=load('lib/opportunity-policy.ts',{'./countries':load('lib/countries
 const dbSchema=load('lib/db/schema.ts')
 const next={'@/lib/server-log':{serverLog(){}},'next/server':{NextResponse:{json:(body,init)=>Response.json(body,init)}}}
 const id='123e4567-e89b-42d3-a456-426614174000'
+
+test('standalone opportunity accepts a typed name without a school and validates lifecycle input',()=>{
+ const good={title:'Chevening',deadline:'',scholarshipAvailable:true,opportunityStatus:'draft'}
+ assert.equal(policy.opportunitySchema.safeParse(good).success,true)
+ for(const extra of [{title:' '},{deadline:'2027-02-30'},{opportunityStatus:'published'},{universityId:id},{isActive:true}]) assert.equal(policy.opportunitySchema.safeParse({...good,...extra}).success,false)
+})
+
+test('creating an opportunity requires PIN-verified administrator access',async()=>{
+ const route=load('app/api/admin/opportunities/route.ts',{...next,'@/lib/opportunity-policy':policy,'@/lib/db/schema':dbSchema,'@/lib/db':{db:{}},'@/lib/require-admin':{requireAdmin:async()=>({response:Response.json({error:'Forbidden'},{status:403})})}})
+ const response=await route.POST(new Request('http://localhost/api/admin/opportunities',{method:'POST',body:'{}'}))
+ assert.equal(response.status,403)
+})
+
+test('standalone opportunity creation saves a draft without inventing a school',async()=>{
+ let values
+ const route=load('app/api/admin/opportunities/route.ts',{...next,'@/lib/opportunity-policy':policy,'@/lib/db/schema':dbSchema,'@/lib/db':{db:{insert:()=>({values:v=>{values=v;return{returning:async()=>[{id,...v}]}}})}},'@/lib/require-admin':{requireAdmin:async()=>({user:{id}})}})
+ const response=await route.POST(new Request('http://localhost/api/admin/opportunities',{method:'POST',body:JSON.stringify({title:'Erasmus Mundus',deadline:'',scholarshipAvailable:true,opportunityStatus:'draft'})}))
+ assert.equal(response.status,200)
+ assert.equal(values.universityId,undefined)
+ assert.equal(values.isActive,false)
+ assert.equal(values.deadline,null)
+})
 test('country price rejects zero, negative amounts, invalid country and unexpected fields',()=>{
  const good={programId:id,payerCountry:'NG',amount:'25000.50',currency:'NGN',bankDetails:'Test bank details only',active:true}
  assert.equal(policy.priceSchema.safeParse(good).success,true)

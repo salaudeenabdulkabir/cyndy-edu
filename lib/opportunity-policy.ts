@@ -12,6 +12,17 @@ export const priceSchema = z.object({
   active: z.boolean(),
 }).strict()
 export const checkoutSchema = z.object({ priceId: z.string().uuid() }).strict()
+export const opportunitySchema = z.object({
+  id: z.string().uuid().optional(),
+  title: z.string().trim().min(2).max(160),
+  description: z.string().trim().max(4000).default(''),
+  destinationLabel: z.string().trim().max(300).default(''),
+  schoolLabel: z.string().trim().max(200).default(''),
+  level: z.string().trim().max(100).default(''),
+  deadline: z.union([z.string().date(), z.literal('')]),
+  scholarshipAvailable: z.boolean(),
+  opportunityStatus: z.enum(['draft', 'open', 'closed']),
+}).strict()
 export const DOCUMENT_SECTIONS = ['personal', 'academic', 'language', 'admissions', 'supporting'] as const
 export function requirementSatisfied(id: string, documents: Array<{documentTypeId: string; status: string | null}>, waivers: Array<{documentTypeId: string}>) {
   return waivers.some(item => item.documentTypeId === id) || documents.some(item => item.documentTypeId === id && ['uploaded', 'verified'].includes(item.status ?? ''))

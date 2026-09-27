@@ -1,6 +1,7 @@
 'use client'
 import { usePortalFetch } from '@/lib/use-portal-fetch'
 import { useCallback, useEffect, useState } from 'react'
+import OpportunityEditor from './opportunity-editor'
 import { WORLD_COUNTRIES } from '@/lib/countries'
 type Price = { programId: string; payerCountry: string; amount: string; currency: string; bankDetails: string; instructions: string; active: boolean }
 type Payment = {reference: string; title: string; email: string; receiptUrl: string | null; order: {id: string; amount: string; currency: string; payerCountry: string; status: string; receiptName: string | null}}
@@ -28,13 +29,14 @@ export default function OpportunityManager() {
     try{const response=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw new Error(data.error);setMessage('Saved successfully.');await load();return true}
     catch(err){setError(err instanceof Error ? err.message : 'Could not save');return false}finally{setBusy(false)}
   }
-  return <section className="space-y-8"><div><h1 className="text-3xl font-bold text-navy">Opportunities &amp; payments</h1><p className="mt-2 text-text-secondary">Create schools and programs in Countries &amp; Programs first. Set a separate service fee and payment instructions for each country the applicant pays from.</p></div>
+  return <section className="space-y-8"><div><h1 className="text-3xl font-bold text-navy">Opportunities &amp; payments</h1><p className="mt-2 text-text-secondary">Create an opportunity by name, then add the Cyndy application assistance fee and payment account for each country the applicant pays from.</p></div>
+    <OpportunityEditor onSaved={id=>{setForm({...empty,programId:id});void load()}}/>
     {error&&<p role="alert" className="rounded bg-red-50 p-4 text-danger">{error}</p>}{message&&<p role="status" className="rounded bg-green-50 p-4">{message}</p>}
     <form className="grid gap-4 rounded-xl border bg-white p-5 sm:grid-cols-2" onSubmit={async event=>{event.preventDefault();await send('/api/admin/opportunity-prices',form)}}>
       <h2 className="text-xl font-bold sm:col-span-2">Country price &amp; bank account</h2>
       <label>Opportunity<select required className="mt-2 w-full" value={form.programId} onChange={event=>setForm({...form,programId:event.target.value})}><option value="">Select opportunity</option>{programs.map(program=><option key={program.id} value={program.id}>{program.title}</option>)}</select></label>
       <label>Applicant pays from<select required className="mt-2 w-full" value={form.payerCountry} onChange={event=>setForm({...form,payerCountry:event.target.value})}><option value="">Select country</option>{WORLD_COUNTRIES.map(country=><option key={country.code} value={country.code}>{country.name}</option>)}</select></label>
-      <label>Service fee<input required inputMode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" className="mt-2 w-full" value={form.amount} onChange={event=>setForm({...form,amount:event.target.value})}/></label>
+      <label>Cyndy application assistance fee<input required inputMode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" className="mt-2 w-full" value={form.amount} onChange={event=>setForm({...form,amount:event.target.value})}/></label>
       <label>Currency code<input required maxLength={3} pattern="[A-Z]{3}" placeholder="NGN, USD, GBP…" className="mt-2 w-full" value={form.currency} onChange={event=>setForm({...form,currency:event.target.value.toUpperCase()})}/></label>
       <label className="sm:col-span-2">Bank name, account holder &amp; account number<textarea required minLength={10} maxLength={2000} className="mt-2 w-full" value={form.bankDetails} onChange={event=>setForm({...form,bankDetails:event.target.value})}/></label>
       <label className="sm:col-span-2">Payment instructions<textarea maxLength={2000} className="mt-2 w-full" value={form.instructions} onChange={event=>setForm({...form,instructions:event.target.value})}/></label>

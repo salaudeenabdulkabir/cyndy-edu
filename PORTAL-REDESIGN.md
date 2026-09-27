@@ -31,14 +31,14 @@ The seven main steps are Opportunity & Payment, Personal & Family, Academic Back
 
 ## Set up a real opportunity
 
-1. In admin **Countries & Programs**, add or open the country, school and program. Set the correct deadline and keep the program active only while applications are open.
-2. Open **Opportunities & Payments**.
-3. Choose the program and the **country the applicant pays from**. This is separate from the study destination.
+1. Open admin **Opportunities & Payments → Create an opportunity**. Type a name such as Chevening, Erasmus Mundus or Stipendium Hungaricum; no school/country catalog setup is needed.
+2. Add the type, description/eligibility, optional destinations, school/consortium, study level and deadline. Start with **Draft**. Use **Edit opportunity** to change details or close it later; closing preserves existing applications and payments.
+3. Select the saved opportunity under **Country price & bank account**, then choose the **country the applicant pays from**. This is separate from the study destination.
 4. Enter the service fee and three-letter currency code, for example NGN, GHS, USD or GBP. No automatic currency conversion occurs.
 5. Enter the bank name, account holder, account number and payment instructions. Explain exactly what the service fee covers and any separate institution fees.
 6. Select **Publish this country price**, then save. Repeat for every supported payer country. A country without a published fee cannot proceed to checkout.
 7. In **Document checklist**, create or edit each requirement. Choose its form section. Use global requirements sparingly; assign opportunity-specific documents and mark them mandatory or optional.
-8. Check the applicant view before sharing the opportunity. Real prices and bank accounts must come from the business; the demo values are not launch defaults.
+8. Edit the opportunity and set its status to **Open** when prices and documents are ready. Draft, closed and expired opportunities cannot receive new purchases. Check the applicant view before sharing the opportunity. Real prices and bank accounts must come from the business; the demo values are not launch defaults.
 
 Existing global requirements still apply. In particular, the old catalog contains a global document named **Receipt**. Review this configuration before rollout: the new payment receipt has its own upload and should not also be required as an academic/supporting document. Changing a global requirement affects drafts, so check legacy applications before changing its scope.
 
@@ -60,10 +60,10 @@ Applicants may save and continue with missing documents. Only an admin who has p
 - Current online staging remains `https://cyndy-edu-staging.onrender.com` on its existing database and code.
 - Local redesign database: Neon branch `portal-opportunity-redesign-2026-09-27` (`br-autumn-thunder-aezrzyq9`).
 - Clean migration verification: `portal-redesign-migration-check-2026-09-27` (`br-mute-resonance-ae3waebw`). Both were branched from launch staging, not modified in place.
-- Migration: `lib/db/migrations/0003_opportunities.sql`, including the atomic checkout function, payment audit/notification trigger and database constraints.
+- Migrations: `lib/db/migrations/0003_opportunities.sql` adds atomic checkout, payment auditing and constraints; `0004_standalone_opportunities.sql` makes schools optional, adds opportunity details/status and updates checkout. Both are applied on the isolated redesign database.
 - `scripts/migrate-redesign.cjs` is deliberately restricted to the local redesign endpoint. It refuses other databases and does nothing if the opportunity schema is already installed.
 - The existing databases were migrated manually and do not have a populated Drizzle migration ledger. **Do not blindly run every historical migration against them.** Apply only the reviewed new migration transaction to the intended target after a backup/branch check, or deliberately baseline the migration ledger first.
-- To publish a separate hosted preview, deploy this feature branch with the redesign database URL and existing test identity/storage configuration. Keep email disabled and use the correct allowed app origin. Do not point new code at a database without migration 0003.
+- To publish a separate hosted preview, deploy this feature branch with the redesign database URL and existing test identity/storage configuration. Keep email disabled and use the correct allowed app origin. Do not point new code at a database without migrations 0003 and 0004.
 - Before changing the current Render deployment, complete admin browser testing, verify real catalog/payment/document configuration and review the preview. A code rollback must keep the additive tables and data available; do not delete orders to roll back the UI.
 
 ## Verification

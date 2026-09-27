@@ -63,7 +63,7 @@ export async function PATCH(
     }
     if (body.programId) {
       const program = await db.query.programs.findFirst({ where: eq(programs.id, body.programId as string) })
-      const school = program && await db.query.universities.findFirst({ where: eq(universities.id, program.universityId) })
+      const school = program?.universityId ? await db.query.universities.findFirst({ where: eq(universities.id, program.universityId) }) : null
       const country = school && await db.query.countries.findFirst({ where: eq(countries.id, school.countryId) })
       if (!program?.isActive || !school?.isAcceptingApplications || !country?.isActive) return NextResponse.json({ error: 'This program is no longer accepting applications', code: 'PROGRAM_CLOSED' }, { status: 400 })
       updates.deadline = program.deadline

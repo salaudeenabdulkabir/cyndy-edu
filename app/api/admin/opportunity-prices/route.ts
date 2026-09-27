@@ -7,8 +7,8 @@ import { priceSchema } from '@/lib/opportunity-policy'
 export async function GET() {
   const access = await requireAdmin(); if ('response' in access) return access.response
   try {
-    const choices=await db.select({id:programs.id,title:programs.title,school:universities.name,country:countries.name}).from(programs).innerJoin(universities,eq(universities.id,programs.universityId)).innerJoin(countries,eq(countries.id,universities.countryId))
-    return NextResponse.json({ prices: await db.select().from(opportunityPrices), programs: choices.map(item=>({id:item.id,title:`${item.title} — ${item.school} (${item.country})`})) })
+    const choices=await db.select({id:programs.id,title:programs.title,school:universities.name,country:countries.name}).from(programs).leftJoin(universities,eq(universities.id,programs.universityId)).leftJoin(countries,eq(countries.id,universities.countryId))
+    return NextResponse.json({ prices: await db.select().from(opportunityPrices), programs: choices.map(item=>({id:item.id,title:item.title})) })
   }
   catch { return NextResponse.json({ error: 'Unable to load prices' }, { status: 503 }) }
 }

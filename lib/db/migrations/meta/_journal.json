@@ -29,6 +29,13 @@
       "when": 1790521013455,
       "tag": "0003_opportunities",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790552820534,
+      "tag": "0004_standalone_opportunities",
+      "breakpoints": true
     }
   ]
 }

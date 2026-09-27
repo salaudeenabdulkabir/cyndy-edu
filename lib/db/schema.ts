@@ -89,8 +89,12 @@ export const universities = pgTable('universities', {
 
 export const programs = pgTable('programs', {
   id: uuid('id').primaryKey().defaultRandom(),
-  universityId: uuid('university_id').notNull().references(() => universities.id, { onDelete: 'cascade' }),
+  universityId: uuid('university_id').references(() => universities.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
+  description: text('description').default(''),
+  destinationLabel: text('destination_label').default(''),
+  schoolLabel: text('school_label').default(''),
+  opportunityStatus: text('opportunity_status').default('open').notNull(),
   level: text('level'),
   field: text('field'),
   deadline: date('deadline'),

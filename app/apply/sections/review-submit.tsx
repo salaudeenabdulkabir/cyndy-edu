@@ -1,4 +1,5 @@
 'use client'
+import { usePortalFetch } from '@/lib/use-portal-fetch'
 
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, CircleAlert, LoaderCircle } from 'lucide-react'
@@ -15,7 +16,7 @@ interface Application {
   customCourseText: string | null
   applicationData: Record<string, unknown> | null
 }
-interface Requirement { id: string; name: string; isMandatory: boolean }
+interface Requirement { id: string; name: string; isMandatory: boolean; waived?: boolean }
 interface Document { documentTypeId: string; status: string }
 
 const hasValue = (value: unknown): boolean => {
@@ -25,6 +26,7 @@ const hasValue = (value: unknown): boolean => {
 }
 
 export default function ReviewSubmit() {
+  const fetch = usePortalFetch()
   const { applicationId } = useWizard()
   const [application, setApplication] = useState<Application | null>(null)
   const [requirements, setRequirements] = useState<Requirement[]>([])
@@ -60,7 +62,7 @@ export default function ReviewSubmit() {
     }
     void load()
     return () => { cancelled = true }
-  }, [applicationId])
+  }, [applicationId, fetch])
 
   const checks = useMemo(() => {
     const data = application?.applicationData ?? {}
@@ -70,7 +72,7 @@ export default function ReviewSubmit() {
       { name: 'Program selection', complete: Boolean(application?.program || application?.customCourseText) },
       { name: 'Personal information', complete: ['firstName', 'lastName', 'gender', 'dateOfBirth', 'phone', 'email', 'homeAddress', 'city', 'country'].every((key) => hasValue(data[key])) },
       ...['Education background', 'Legal guardians', 'Research experience'].map(name => ({ name, complete: !missingApplicationFields(data).includes(name) })),
-      { name: 'Required documents', complete: mandatoryDocuments.every((requirement) => uploadedIds.has(requirement.id)) },
+      { name: 'Required documents', complete: mandatoryDocuments.every((requirement) => requirement.waived || uploadedIds.has(requirement.id)) },
       { name: 'Payment confirmation', complete: application?.paymentConfirmed === true },
     ]
   }, [application, documents, requirements])

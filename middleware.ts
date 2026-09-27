@@ -17,7 +17,7 @@ export default clerkMiddleware(async (auth, req) => {
     const role = user.publicMetadata.role || 'client'
     if (path.startsWith('/admin') && (role !== 'admin' || !await hasAdminSession(sessionId))) return NextResponse.redirect(new URL('/admin/login', req.url))
     if (path.startsWith('/worker') && role !== 'worker' && role !== 'admin') return NextResponse.redirect(new URL('/apply', req.url))
-    if ((path.startsWith('/apply') || path.startsWith('/status')) && role !== 'client') return NextResponse.redirect(new URL(role === 'admin' ? '/admin' : '/worker', req.url))
+    if ((path.startsWith('/apply') || path.startsWith('/status') || path.startsWith('/opportunities')) && role !== 'client') return NextResponse.redirect(new URL(role === 'admin' ? '/admin' : '/worker', req.url))
   }
   const response = NextResponse.next()
   response.headers.set('Cache-Control', 'private, no-store, max-age=0')

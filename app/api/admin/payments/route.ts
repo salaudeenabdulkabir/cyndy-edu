@@ -95,7 +95,7 @@ export async function PATCH(req: Request) {
         paymentConfirmed: true,
         packageId: receipt.packageId,
         updatedAt: confirmedAt,
-      }).where(eq(applications.clientId, receipt.clientId))])
+      }).where(and(eq(applications.clientId, receipt.clientId), eq(applications.opportunityPurchase, false)))])
     } else {
       if (receipt.confirmed) return NextResponse.json({ error: 'Confirmed receipts cannot be rejected', code: 'INVALID_TRANSITION' }, { status: 409 })
       const rejected = await db.update(paymentReceipts).set({

@@ -8,7 +8,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { and, eq, or } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { applicationDocuments, applications, documentTypes, programDocuments, users } from '@/lib/db/schema'
+import { applicationDocuments, applications, documentTypes, programDocuments, users, documentWaivers } from '@/lib/db/schema'
 import { buildDocumentKey, deleteFile, getSignedDownloadUrl, isStorageConfigured, r2Client } from '@/lib/r2'
 
 import { ensureClientProfile as getUser } from '@/lib/client-profile'
@@ -23,7 +23,7 @@ export async function GET(_request: Request, { params: paramsPromise }: { params
     if (!user?.isActive || user.role !== 'client' || !application || application.clientId !== user.id) return NextResponse.json({ error: 'Application not found', code: 'APPLICATION_NOT_FOUND' }, { status: 404 })
 
     const requirements = await db.select({
-      id: documentTypes.id, name: documentTypes.name, description: documentTypes.description,
+      section: documentTypes.section, id: documentTypes.id, name: documentTypes.name, description: documentTypes.description,
       acceptedFormats: documentTypes.acceptedFormats, maxSizeMb: documentTypes.maxSizeMb,
       expiryDays: documentTypes.expiryDays, isGlobal: documentTypes.isGlobal,
       isMandatory: programDocuments.isMandatory,
@@ -39,8 +39,9 @@ export async function GET(_request: Request, { params: paramsPromise }: { params
       where: eq(applicationDocuments.applicationId, application.id),
       columns: { id: true, documentTypeId: true, status: true, rejectionReason: true, fileUrl: true, r2Key: true, uploadedAt: true },
     })
+    const waivers = await db.query.documentWaivers.findMany({ where: eq(documentWaivers.applicationId, application.id) })
     return NextResponse.json({
-      requirements: requirements.map((item) => ({ ...item, isMandatory: item.isMandatory ?? true })),
+      requirements: requirements.map((item) => ({ ...item, isMandatory: item.isGlobal || item.isMandatory === true, waived: waivers.some(waiver => waiver.documentTypeId === item.id) })),
       documents: await Promise.all(documents.map(async (document) => ({
         ...document,
         fileUrl: await getSignedDownloadUrl(document.r2Key, 3600),
@@ -63,7 +64,7 @@ export async function POST(request: Request, { params: paramsPromise }: { params
     const application = await db.query.applications.findFirst({ where: eq(applications.id, params.id) })
     if (!user?.isActive || user.role !== 'client' || !application || application.clientId !== user.id) return NextResponse.json({ error: 'Application not found', code: 'APPLICATION_NOT_FOUND' }, { status: 404 })
 
-    if (!application.paymentConfirmed) return NextResponse.json({ error: 'Payment confirmation required', code: 'PAYMENT_REQUIRED' }, { status: 403 })
+
     if (!isStorageConfigured()) return NextResponse.json({ error: 'Document uploads are not ready yet. Please contact support; your application is saved.', code: 'STORAGE_NOT_CONFIGURED' }, { status: 503 })
     const formData = await request.formData()
     const file = formData.get('file')

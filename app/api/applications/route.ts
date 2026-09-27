@@ -2,12 +2,12 @@ import { serverLog } from '@/lib/server-log'
 import { clientApplication } from '@/lib/application-policy'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
-import { applications } from '@/lib/db/schema'
+import { applications, clientPackages } from '@/lib/db/schema'
 import { and, asc, eq } from 'drizzle-orm'
 import { generateReferenceNo } from '@/lib/utils'
 import { NextResponse } from 'next/server'
 
-import { ensureClientProfile, ensureClientPackage } from '@/lib/client-profile'
+import { ensureClientProfile } from '@/lib/client-profile'
 
 export async function POST(req: Request) {
   const { userId } = await auth()
@@ -22,7 +22,8 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => ({}))
     const slot = body.slot ?? 1
-    const pkg = await ensureClientPackage(user.id)
+    const pkg = await db.query.clientPackages.findFirst({where:eq(clientPackages.clientId,user.id)})
+    if (!pkg) return NextResponse.json({error:'Choose an opportunity from your dashboard to start an application.'},{status:409})
     if (!Number.isInteger(slot) || slot < 1 || slot > (pkg.totalApplications ?? 1)) return NextResponse.json({ error: 'Application slot is outside your package' }, { status: 403 })
     // Database uniqueness arbitrates concurrent initialization requests.
     const existing = await db.query.applications.findFirst({
@@ -64,6 +65,7 @@ export async function GET() {
     if (!user.isActive || user.role !== 'client') return NextResponse.json({ error: 'Active client access required', code: 'FORBIDDEN' }, { status: 403 })
 
     const apps = await db.query.applications.findMany({
+      with: { program: { columns: {title:true} } },
       orderBy: asc(applications.slot),
       where: eq(applications.clientId, user.id),
     })

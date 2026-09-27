@@ -1,8 +1,8 @@
 # Cyndy Educational Pathways — project handbook
 
-Cyndy is a Next.js application for international education applications, payment-receipt review, document collection, staff processing and applicant updates. This handbook covers the implemented screens, account setup, local development and the GitLab → Vercel deployment path.
+Cyndy is a Next.js application for international education applications, payment-receipt review, document collection, staff processing and applicant updates. The current hosted staging site uses GitLab → Render; see [RENDER-STAGING.md](RENDER-STAGING.md). Older Vercel instructions below describe an alternative deployment path.
 
-**Release status:** local configuration is incomplete. The previously missing local admin PIN hash and Upstash REST token were supplied on 15 September 2026; format checks and Redis PING now pass. The selected administrator role has now been aligned between Clerk and the isolated database; the interactive login/PIN test remains pending. A working sign-in screen is not evidence that payment, uploads or all authenticated workflows have passed. See [READINESS.md](READINESS.md) for verification evidence and [LAUNCH.md](LAUNCH.md) for remaining release requirements.
+**Redesign preview:** [PORTAL-REDESIGN.md](PORTAL-REDESIGN.md) covers the new opportunity dashboard, country-specific prices, separate application payments, section-based documents and admin setup. It runs locally against an isolated database on port 3002. The existing online staging deployment has not been replaced. See [READINESS.md](READINESS.md) and [LAUNCH.md](LAUNCH.md) for public launch requirements.
 
 ## 1. Where everything lives
 

@@ -6,6 +6,7 @@ export const staffUpdateSchema = z.object({
 }).strict()
 
 export const clientUpdateSchema = z.object({
+  desiredCourse: z.string().trim().max(200).optional(),
   programId: z.string().uuid().nullable().optional(),
   customCourseText: z.string().trim().max(200).nullable().optional(),
   countryId: z.string().uuid().optional(), universityId: z.string().uuid().optional(),

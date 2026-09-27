@@ -35,7 +35,7 @@ test('application slot outside the purchased allowance cannot create a record', 
   const route = load('app/api/applications/route.ts', {
     '@clerk/nextjs/server': { auth: async () => ({ userId: 'test-client' }) },
     '@/lib/client-profile': { ensureClientProfile: async () => ({id: 'client', isActive: true, role: 'client'}), ensureClientPackage: async () => ({ totalApplications: 1 }) },
-    '@/lib/db': { db: { insert: () => { throw new Error('must not insert') } } }, '@/lib/db/schema': load('lib/db/schema.ts'),
+    '@/lib/db': { db: { query: {clientPackages:{findFirst:async()=>({totalApplications:1})}}, insert: () => { throw new Error('must not insert') } } }, '@/lib/db/schema': load('lib/db/schema.ts'),
     '@/lib/application-policy': load('lib/application-policy.ts'), '@/lib/utils': { generateReferenceNo: () => { throw new Error('must not allocate') } },
     'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
   })

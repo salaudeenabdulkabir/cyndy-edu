@@ -1,12 +1,12 @@
 import { serverLog } from '@/lib/server-log'
-import { ensureClientProfile, ensureClientPackage } from '@/lib/client-profile'
+import { ensureClientProfile } from '@/lib/client-profile'
 import { checkUploadLimit } from '@/lib/upload-limit'
 import { matchesFileSignature } from '@/lib/upload-validation'
 import { auth } from '@clerk/nextjs/server'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { db } from '@/lib/db'
 import { applications, clientPackages, paymentReceipts, users } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { r2Client, buildReceiptKey, getSignedDownloadUrl, isStorageConfigured } from '@/lib/r2'
 import { NextResponse } from 'next/server'
 
@@ -36,7 +36,8 @@ export async function POST(req: Request) {
 
     const user = await ensureClientProfile(userId)
     if (!user.isActive || user.role !== 'client') return NextResponse.json({ error: 'Active client access required', code: 'FORBIDDEN' }, { status: 403 })
-    const packageRecord = await ensureClientPackage(user.id)
+    const packageRecord = await db.query.clientPackages.findFirst({where:eq(clientPackages.clientId,user.id)})
+    if (!packageRecord) return NextResponse.json({error:'Select an opportunity and upload its receipt from that application.'},{status:409})
     if (packageRecord.paymentConfirmed) return NextResponse.json({ error: 'Payment is already confirmed', code: 'ALREADY_CONFIRMED' }, { status: 409 })
     if (!isStorageConfigured()) return NextResponse.json({ error: 'Receipt uploads are not ready yet. Please contact support.', code: 'STORAGE_NOT_CONFIGURED' }, { status: 503 })
     const key = buildReceiptKey(user.id, file.type)
@@ -61,7 +62,7 @@ export async function POST(req: Request) {
     await db.update(applications).set({
       packageId: packageRecord.id,
       updatedAt: new Date(),
-    }).where(eq(applications.clientId, user.id))
+    }).where(and(eq(applications.clientId, user.id), eq(applications.opportunityPurchase, false)))
 
     return NextResponse.json({ receipt: { ...receipt, fileUrl: await getSignedDownloadUrl(key, 900) } }, { status: 201 })
   } catch (error) {

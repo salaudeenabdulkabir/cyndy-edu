@@ -1,33 +1,25 @@
 'use client'
+import { useEffect, useRef, useState } from 'react'
 import { formProgress, missingApplicationFields } from '@/lib/application-policy'
 
 import { useWizard } from './wizard-context'
 import { UserButton } from '@clerk/nextjs'
-import { Check, GraduationCap, UserRound, BookOpen, Trophy, UsersRound, BriefcaseBusiness, FlaskConical, Newspaper, Presentation, ScrollText, HeartHandshake, Star, Drama, Languages, FileText, ClipboardCheck } from 'lucide-react'
+import { Check, GraduationCap, UserRound, BookOpen, BriefcaseBusiness, Languages, FileText, ClipboardCheck } from 'lucide-react'
 
 const SECTIONS = [
-  { id: 0, name: 'Program Selection', required: true, icon: GraduationCap },
-  { id: 1, name: 'Personal Information', required: true, icon: UserRound },
-  { id: 2, name: 'Education Background', required: true, icon: BookOpen },
-  { id: 3, name: 'Awards & Achievements', required: false, icon: Trophy },
-  { id: 4, name: 'Legal Guardians', required: true, icon: UsersRound },
-  { id: 5, name: 'Work Experience', required: false, icon: BriefcaseBusiness },
-  { id: 6, name: 'Research Experience', required: true, icon: FlaskConical },
-  { id: 7, name: 'Publications', required: false, icon: Newspaper },
-  { id: 8, name: 'Teaching Experience', required: false, icon: Presentation },
-  { id: 9, name: 'Certifications', required: false, icon: ScrollText },
-  { id: 10, name: 'Voluntary Experience', required: false, icon: HeartHandshake },
-  { id: 11, name: 'Leadership', required: false, icon: Star },
-  { id: 12, name: 'Clubs & Associations', required: false, icon: Drama },
-  { id: 13, name: 'Languages', required: false, icon: Languages },
-  { id: 14, name: 'Document Upload', required: true, icon: FileText },
-  { id: 15, name: 'Review & Submit', required: true, icon: ClipboardCheck },
+  { id: 0, name: 'Opportunity & Payment', required: true, icon: GraduationCap },
+  { id: 1, name: 'Personal & Family', required: true, icon: UserRound },
+  { id: 2, name: 'Academic Background', required: true, icon: BookOpen },
+  { id: 3, name: 'Experience', required: false, icon: BriefcaseBusiness },
+  { id: 4, name: 'Languages', required: false, icon: Languages },
+  { id: 5, name: 'Other Documents', required: true, icon: FileText },
+  { id: 6, name: 'Review & Submit', required: true, icon: ClipboardCheck },
 ]
 
 export function WizardSidebar() {
   const { currentSection, setCurrentSection, referenceNo, deadline, initialData } = useWizard()
   const missing = missingApplicationFields(initialData)
-  const completedSections = new Set<number>([[0, Boolean(initialData.programId || initialData.customCourseText)], [1, !missing.includes('Personal information')], [2, !missing.includes('Education background')], [4, !missing.includes('Legal guardians')], [6, !missing.includes('Research experience')]].filter(([, complete]) => complete).map(([id]) => Number(id)))
+  const completedSections = new Set<number>([[0, Boolean(initialData.programId || initialData.customCourseText)], [1, !missing.includes('Personal information') && !missing.includes('Legal guardians')], [2, !missing.includes('Education background') && !missing.includes('Research experience')]].filter(([, complete]) => complete).map(([id]) => Number(id)))
   const completionPercent = formProgress(initialData, Boolean(initialData.programId || initialData.customCourseText))
 
   return (
@@ -89,7 +81,7 @@ export function WizardSidebar() {
             onClick={() => setCurrentSection(section.id)}
             className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all flex items-center gap-3 ${
               currentSection === section.id
-                ? 'bg-gold-dim text-gold border-l-[3px] border-gold'
+                ? 'bg-gold-dim text-navy border-l-[3px] border-gold'
                 : 'text-text-secondary hover:bg-gray-50'
             }`}
           >
@@ -109,27 +101,18 @@ export function WizardSidebar() {
 
 export function MobileWizardNav() {
   const { currentSection, setCurrentSection } = useWizard()
-
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 flex gap-2 overflow-x-auto border-t border-border bg-white p-3 md:hidden">
-      {SECTIONS.map((section) => {
-        const Icon = section.icon
-        return (
-          <button
-            key={section.id}
-            type="button"
-            onClick={() => setCurrentSection(section.id)}
-            aria-label={section.name}
-            aria-current={currentSection === section.id ? 'step' : undefined}
-            className={`flex min-w-12 flex-col items-center gap-1 rounded-lg px-3 py-2 text-xs ${currentSection === section.id ? 'bg-gold-dim text-gold' : 'text-text-secondary'}`}
-          >
-            <Icon size={17} strokeWidth={1.5} />
-            <span className="whitespace-nowrap">{section.name}</span>
-          </button>
-        )
-      })}
-    </nav>
-  )
+  const [open,setOpen] = useState(false)
+  const dialog = useRef<HTMLDialogElement>(null)
+  const trigger = useRef<HTMLButtonElement>(null)
+  useEffect(()=>{ if(open) dialog.current?.showModal(); else if(dialog.current?.open) dialog.current.close() },[open])
+  return <div className="fixed left-0 right-0 top-16 z-40 md:hidden">
+    <div className="border-b bg-white px-5 py-3"><button ref={trigger} onClick={()=>setOpen(true)} aria-haspopup="dialog" aria-expanded={open} className="rounded-lg border px-4 py-2 text-sm font-semibold">☰ Sections · {currentSection+1} of {SECTIONS.length}</button><p className="mt-2 text-sm text-text-secondary">{SECTIONS[currentSection].name}</p></div>
+    <dialog ref={dialog} aria-label="Application sections" onClose={()=>{setOpen(false);trigger.current?.focus()}} className="fixed inset-y-0 left-0 m-0 h-dvh max-h-none w-80 max-w-[90vw] border-r bg-white p-0 backdrop:bg-black/40">
+      <div className="flex items-center justify-between border-b p-5"><h2 className="font-bold">Application sections</h2><button onClick={()=>setOpen(false)} className="rounded border px-3 py-2" aria-label="Close sections">✕</button></div>
+      <nav className="space-y-1 p-3">{SECTIONS.map(section=><button key={section.id} onClick={()=>{setCurrentSection(section.id);setOpen(false)}} aria-current={currentSection===section.id ? 'step' : undefined} className={`flex w-full items-center gap-3 rounded-lg p-3 text-left text-sm ${currentSection===section.id ? 'bg-gold-dim font-semibold text-navy' : 'text-text-secondary'}`}><section.icon size={18}/>{section.name}</button>)}</nav>
+      <a href="/support" className="m-5 block underline">Help with your application</a>
+    </dialog>
+  </div>
 }
 
 export function WizardHeader() {
@@ -138,7 +121,7 @@ export function WizardHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-border z-40 flex items-center px-6">
       <div className="flex-1">
-        <h2 className="font-heading text-lg font-bold text-navy">
+        <a href="/opportunities" className="text-xs underline">My applications</a><h2 className="font-heading text-lg font-bold text-navy">
           Your Application
         </h2>
       </div>

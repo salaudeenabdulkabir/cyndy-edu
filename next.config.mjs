@@ -14,4 +14,4 @@ const nextConfig = {
     ] }, { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-store' }] }]
   },
 }
-export default phase => ({ ...nextConfig, distDir: phase === PHASE_DEVELOPMENT_SERVER ? (process.env.CYNDY_STAGING_PREVIEW === 'true' ? '.next-staging' : '.next-dev') : '.next' })
+export default phase => ({ ...nextConfig, distDir: phase === PHASE_DEVELOPMENT_SERVER ? (process.env.CYNDY_REDESIGN_PREVIEW === 'true' ? '.next-redesign' : process.env.CYNDY_STAGING_PREVIEW === 'true' ? '.next-staging' : '.next-dev') : '.next' })

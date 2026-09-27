@@ -1,12 +1,12 @@
 'use client'
+import { usePortalFetch } from '@/lib/use-portal-fetch'
 
 import { useAuth } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { WizardProvider, useWizard } from './wizard-context'
 import { MobileWizardNav, WizardSidebar, WizardHeader } from './sidebar'
-import { PaymentGate } from './payment-gate'
-import ProgramSelection from './sections/program-selection'
+import OpportunityPayment from './opportunity-payment'
 import PersonalInfo from './sections/personal-info'
 import EducationBackground from './sections/education-background'
 import DocumentUpload from './sections/document-upload'
@@ -14,40 +14,34 @@ import ReviewSubmit from './sections/review-submit'
 import Guardians from './sections/guardians'
 import ResearchExperience from './sections/research'
 import OptionalExperience from './sections/optional-experience'
+import Experience from './sections/experience'
 
 const SECTIONS_COMPONENTS = [
-  ProgramSelection,
-  PersonalInfo,
-  EducationBackground,
-  () => <OptionalExperience title="Awards & Achievements" description="Add awards and achievements that strengthen your application." fields={[{ key: 'title', label: 'Award title' }, { key: 'body', label: 'Awarding body' }, { key: 'year', label: 'Year', type: 'number' }]} />,
-  Guardians,
-  () => <OptionalExperience title="Work Experience" description="Add relevant professional experience." fields={[{ key: 'jobTitle', label: 'Job title' }, { key: 'company', label: 'Company' }, { key: 'location', label: 'Location' }, { key: 'period', label: 'Period' }]} />,
-  ResearchExperience,
-  () => <OptionalExperience title="Publications" description="List publications, articles, or conference papers." fields={[{ key: 'title', label: 'Publication title' }, { key: 'type', label: 'Type' }, { key: 'year', label: 'Year', type: 'number' }, { key: 'link', label: 'DOI or link' }]} />,
-  () => <OptionalExperience title="Teaching Experience" description="Add teaching, mentoring, or tutoring experience." fields={[{ key: 'institution', label: 'Institution' }, { key: 'location', label: 'Location' }, { key: 'role', label: 'Role' }, { key: 'period', label: 'Period' }]} />,
-  () => <OptionalExperience title="Certifications" description="Add professional or academic certifications." fields={[{ key: 'title', label: 'Certification title' }, { key: 'body', label: 'Awarding body' }, { key: 'date', label: 'Date' }, { key: 'format', label: 'Online or in-person' }]} />,
-  () => <OptionalExperience title="Voluntary Experience" description="Add community service and voluntary work." fields={[{ key: 'organization', label: 'Organization' }, { key: 'role', label: 'Role' }, { key: 'period', label: 'Period' }]} />,
-  () => <OptionalExperience title="Leadership" description="Add leadership positions and responsibilities." fields={[{ key: 'position', label: 'Position' }, { key: 'organization', label: 'Organization' }, { key: 'years', label: 'Year(s)' }]} />,
-  () => <OptionalExperience title="Clubs & Associations" description="Add clubs, societies, and professional associations." fields={[{ key: 'name', label: 'Club or association' }, { key: 'role', label: 'Role' }, { key: 'years', label: 'Year(s)' }]} />,
-  () => <OptionalExperience title="Languages" description="List languages and your proficiency level." fields={[{ key: 'language', label: 'Language' }, { key: 'proficiency', label: 'Proficiency' }]} />,
-  DocumentUpload,
+  OpportunityPayment,
+  () => <div className="space-y-10"><PersonalInfo /><DocumentUpload section="personal" /><Guardians /></div>,
+  () => <div className="space-y-10"><EducationBackground /><DocumentUpload section="academic" /><ResearchExperience /></div>,
+  Experience,
+  () => <><OptionalExperience title="Languages" description="List languages and your proficiency level." fields={[{ key: 'language', label: 'Language' }, { key: 'proficiency', label: 'Proficiency' }]} /><DocumentUpload section="language" /></>,
+  () => <><h1 className="text-3xl font-bold text-navy">Other documents</h1><p className="mt-3 text-text-secondary">Admissions tests and other supporting documents are listed below when your opportunity requires them. You can save and continue while gathering missing documents.</p><DocumentUpload section="admissions" /><DocumentUpload section="supporting" /></>,
   ReviewSubmit,
 ]
 
 function WizardContent() {
-  const { currentSection } = useWizard()
+  const { currentSection, setCurrentSection, isSaving } = useWizard()
   const CurrentSection = SECTIONS_COMPONENTS[currentSection]
 
   return (
-    <div className="ml-0 min-h-screen pb-24 pt-16 md:ml-64 md:pb-8">
+    <div className="ml-0 min-h-screen pb-8 pt-4 md:ml-64">
       <div className="mx-auto max-w-3xl p-5 md:p-8">
         {CurrentSection && <CurrentSection />}
+        {currentSection < 6 && <div className="mt-8 flex items-center justify-between gap-4 border-t pt-6"><button disabled={currentSection===0 || isSaving} onClick={()=>setCurrentSection(currentSection-1)} className="rounded-lg border px-5 py-3 disabled:opacity-40">Back</button><button disabled={isSaving} onClick={()=>setCurrentSection(currentSection+1)} className="rounded-lg bg-navy px-6 py-3 font-semibold text-white disabled:opacity-50">Save and continue</button></div>}
       </div>
     </div>
   )
 }
 
 export function ApplyPageContent() {
+  const fetch = usePortalFetch()
   const { isLoaded, isSignedIn } = useAuth()
   const router = useRouter()
   const [availableApps, setAvailableApps] = useState<Array<{id: string; slot: number; referenceNo: string}>>([])
@@ -69,19 +63,15 @@ export function ApplyPageContent() {
       setError('')
 
       try {
-        const res = await fetch('/api/applications', { method: 'POST' })
-        const app = await res.json()
-
-        if (!res.ok || !app?.id) {
-          throw new Error(app?.error ?? 'Application initialization failed')
-        }
 
         const listResponse = await fetch('/api/applications')
         if (!listResponse.ok) throw new Error('Unable to load application slots')
         const list = await listResponse.json()
         setAvailableApps(list)
         const selected = new URLSearchParams(window.location.search).get('application')
-        setApplicationId(list.some((item: {id: string}) => item.id === selected) ? selected : app.id)
+        if (!selected) { router.replace('/opportunities'); return }
+        if (!list.some((item: {id: string}) => item.id === selected)) throw new Error('Application not found. Open it from My applications.')
+        setApplicationId(selected)
       } catch (err) {
         console.error('Failed to initialize application:', err)
         setApplicationId('')
@@ -92,7 +82,7 @@ export function ApplyPageContent() {
     }
 
     initApp()
-  }, [isLoaded, isSignedIn, router])
+  }, [isLoaded, isSignedIn, router, fetch])
 
   if (!isLoaded || loading) {
     return (
@@ -125,13 +115,15 @@ export function ApplyPageContent() {
 
   return (
     <WizardProvider key={applicationId} applicationId={applicationId}>
-      <PaymentGate applicationId={applicationId}>
+
       <WizardHeader />
       <WizardSidebar />
       <MobileWizardNav />
-      {availableApps.length > 1 && <div className="ml-0 pt-20 px-5 md:ml-64"><label className="text-sm font-semibold">Application<select className="ml-3" value={applicationId} onChange={event => { window.location.href = '/apply?application=' + encodeURIComponent(event.target.value) }}>{availableApps.map(item => <option key={item.id} value={item.id}>Application {item.slot}: {item.referenceNo}</option>)}</select></label></div>}
+      <div className="pt-44 md:pt-16">
+      {availableApps.length > 1 && <div className="ml-0 px-5 pt-5 md:ml-64"><label className="text-sm font-semibold">Application<select className="ml-3" value={applicationId} onChange={event => { window.location.href = '/apply?application=' + encodeURIComponent(event.target.value) }}>{availableApps.map(item => <option key={item.id} value={item.id}>{item.referenceNo}</option>)}</select></label></div>}
       <WizardContent />
-      </PaymentGate>
+      </div>
+
     </WizardProvider>
   )
 }

@@ -1,4 +1,5 @@
 'use client'
+import { usePortalFetch } from '@/lib/use-portal-fetch'
 
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth, useClerk } from '@clerk/nextjs'
@@ -16,6 +17,7 @@ const stages: Array<{ id: AppStatus; label: string }> = [
 const statusIndex = (status: AppStatus) => status === 'docs_complete' ? 3 : stages.findIndex((stage) => stage.id === status)
 
 export default function StatusPage() {
+  const fetch = usePortalFetch()
   const { isLoaded, isSignedIn } = useAuth()
   const { signOut } = useClerk()
   const router = useRouter()
@@ -40,7 +42,7 @@ export default function StatusPage() {
       } finally { setLoading(false) }
     }
     void load()
-  }, [isLoaded, isSignedIn, router])
+  }, [isLoaded, isSignedIn, router, fetch])
 
   useEffect(() => {
     if (!selectedId) return
@@ -58,7 +60,7 @@ export default function StatusPage() {
     void loadDetail()
     const timer = setInterval(() => void loadDetail(), 30000)
     return () => { cancelled = true; clearInterval(timer) }
-  }, [selectedId])
+  }, [selectedId, fetch])
 
   const documentStats = useMemo(() => {
     const docs = application?.documents ?? []

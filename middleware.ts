@@ -2,7 +2,7 @@ import { clerkMiddleware, createRouteMatcher, clerkClient } from '@clerk/nextjs/
 import { NextResponse } from 'next/server'
 import { hasAdminSession } from '@/lib/admin-session'
 import { isAllowedRequestOrigin } from '@/lib/request-origin'
-const publicRoute = createRouteMatcher(['/', '/contact', '/offline.html', '/api/jobs/notifications', '/api/health', '/api/webhooks/clerk', '/sign-in(.*)', '/sign-up(.*)', '/worker/login', '/admin/login', '/privacy-policy', '/terms-of-service', '/manifest.json', '/sw.js', '/icons(.*)'])
+const publicRoute = createRouteMatcher(['/', '/contact', '/support', '/offline.html', '/api/jobs/notifications', '/api/health', '/api/webhooks/clerk', '/sign-in(.*)', '/sign-up(.*)', '/worker/login', '/admin/login', '/privacy-policy', '/terms-of-service', '/manifest.json', '/sw.js', '/icons(.*)'])
 export default clerkMiddleware(async (auth, req) => {
   const path = req.nextUrl.pathname
   if (req.method !== 'GET' && req.method !== 'HEAD' && !path.startsWith('/api/webhooks/')) {

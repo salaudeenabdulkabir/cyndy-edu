@@ -1,4 +1,5 @@
 'use client'
+import { usePortalFetch } from '@/lib/use-portal-fetch'
 
 import { useClerk, useUser } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
@@ -36,6 +37,7 @@ interface WorkerResponse {
 }
 
 export default function WorkerDashboard() {
+  const fetch = usePortalFetch()
   const { user } = useUser()
   const { signOut } = useClerk()
   const [data, setData] = useState<WorkerResponse | null>(null)
@@ -64,7 +66,7 @@ export default function WorkerDashboard() {
     }
 
     void loadApplications()
-  }, [])
+  }, [fetch])
 
   const stats = [
     { label: 'Active applications', value: data?.stats.active ?? 0, icon: ClipboardList },
@@ -102,11 +104,11 @@ export default function WorkerDashboard() {
       const response = await fetch(`/api/applications/${selectedApplication.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, workerNotes }),
+        body: JSON.stringify({ ...(status !== 'draft' ? { status } : {}), workerNotes }),
       })
       const body = await response.json() as ApplicationDetail & { error?: string }
       if (!response.ok) throw new Error(body.error ?? 'Failed to save application')
-      setSelectedApplication(body)
+      setSelectedApplication(previous => previous ? { ...previous, ...body, documents: previous.documents } : body)
       setData((previous) => previous ? {
         ...previous,
         applications: previous.applications.map((application) => application.id === body.id ? { ...application, status: body.status } : application),
@@ -133,7 +135,7 @@ export default function WorkerDashboard() {
       })
       const body = await response.json() as { document?: ApplicationDocument; error?: string }
       if (!response.ok || !body.document) throw new Error(body.error ?? 'Failed to update document')
-      setSelectedApplication((previous) => previous ? { ...previous, documents: previous.documents?.map((document) => document.id === documentId ? body.document as ApplicationDocument : document) } : previous)
+      setSelectedApplication((previous) => previous ? { ...previous, documents: previous.documents?.map((document) => document.id === documentId ? { ...document, status: body.document!.status, rejectionReason: body.document!.rejectionReason } : document) } : previous)
     } catch (reviewError) {
       setDetailError(reviewError instanceof Error ? reviewError.message : 'Failed to update document')
     } finally {

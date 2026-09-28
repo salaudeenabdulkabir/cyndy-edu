@@ -21,6 +21,7 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: 'Check document name, formats and size (1–4 MB)' }, { status: 400 })
     const { id, programId, isMandatory, ...values } = parsed.data
     if (!values.isGlobal && !programId) return NextResponse.json({ error: 'Select a program or make the requirement global' }, { status: 400 })
+    if (programId && !await db.query.programs.findFirst({ where: eq(programs.id, programId) })) return NextResponse.json({ error: 'Opportunity not found. Reload and select an existing opportunity.' }, { status: 404 })
     if (id && !await db.query.documentTypes.findFirst({where:eq(documentTypes.id,id)})) return NextResponse.json({error:'Document type not found'},{status:404})
     const documentTypeId = id ?? randomUUID()
     const save = id ? db.update(documentTypes).set(values).where(eq(documentTypes.id,id)) : db.insert(documentTypes).values({...values,id:documentTypeId})

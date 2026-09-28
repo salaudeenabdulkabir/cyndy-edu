@@ -1,4 +1,5 @@
 'use client'
+import { usePortalFetch } from '@/lib/use-portal-fetch'
 
 import { SignIn, useAuth, useClerk } from '@clerk/nextjs'
 import Link from 'next/link'
@@ -6,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 export default function StaffLogin({ portal }: { portal: 'admin' | 'worker' }) {
+  const fetch = usePortalFetch()
   const { isLoaded, isSignedIn } = useAuth()
   const { signOut } = useClerk()
   const router = useRouter()
@@ -35,7 +37,7 @@ export default function StaffLogin({ portal }: { portal: 'admin' | 'worker' }) {
       if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'Unable to verify account.')
     }).finally(() => { if (!controller.signal.aborted) setChecking(false) })
     return () => controller.abort()
-  }, [isLoaded, isSignedIn, portal, router, retry])
+  }, [isLoaded, isSignedIn, portal, router, retry, fetch])
 
   async function verifyPin(event: React.FormEvent) {
     event.preventDefault()

@@ -7,6 +7,31 @@ const dbSchema=load('lib/db/schema.ts')
 const next={'@/lib/server-log':{serverLog(){}},'next/server':{NextResponse:{json:(body,init)=>Response.json(body,init)}}}
 const id='123e4567-e89b-42d3-a456-426614174000'
 
+test('support is public without exposing private applicant routes',async()=>{
+ const route=load('middleware.ts',{
+  '@clerk/nextjs/server':{clerkMiddleware:fn=>fn,createRouteMatcher:paths=>req=>paths.includes(req.nextUrl.pathname)},
+  '@/lib/admin-session':{},'@/lib/request-origin':{},
+  'next/server':{NextResponse:{next:()=>new Response(null,{status:200}),json:(body,init)=>Response.json(body,init),redirect:()=>new Response(null,{status:307})}},
+ })
+ const response=await route.default(()=>{throw Error('support must not require login')},{method:'GET',nextUrl:{pathname:'/support'}})
+ assert.equal(response.status,200)
+ const privateResponse=await route.default(async()=>({userId:null}),{method:'GET',nextUrl:{pathname:'/api/applications'},url:'http://localhost/api/applications'})
+ assert.equal(privateResponse.status,401)
+})
+
+test('document assignment rejects a missing opportunity before writing',async()=>{
+ const route=load('app/api/admin/document-types/route.ts',{...next,'@/lib/opportunity-policy':policy,'@/lib/db/schema':dbSchema,'@/lib/db':{db:{query:{programs:{findFirst:async()=>undefined}},insert:()=>{throw Error('must not write')}}},'@/lib/require-admin':{requireAdmin:async()=>({admin:{id}})}})
+ const response=await route.POST(new Request('http://localhost/api/admin/document-types',{method:'POST',body:JSON.stringify({name:'Transcript',section:'academic',acceptedFormats:['pdf'],maxSizeMb:4,isGlobal:false,programId:id,isMandatory:true})}))
+ assert.equal(response.status,404)
+})
+
+test('worker must change the temporary password before accessing assigned applications',async()=>{
+ const route=load('app/api/worker/applications/route.ts',{...next,'@/lib/db/schema':dbSchema,'@/lib/db':{db:{query:{users:{findFirst:async()=>({id,role:'worker',isActive:true,firstLogin:true})}},select:()=>{throw Error('must not read applications')}}},'@clerk/nextjs/server':{auth:async()=>({userId:'test-worker'})},'@/lib/require-admin':{requireAdmin:async()=>{throw Error('worker is not admin')}}})
+ const response=await route.GET()
+ assert.equal(response.status,403)
+ assert.equal((await response.json()).code,'PASSWORD_CHANGE_REQUIRED')
+})
+
 test('standalone opportunity accepts a typed name without a school and validates lifecycle input',()=>{
  const good={title:'Chevening',deadline:'',scholarshipAvailable:true,opportunityStatus:'draft'}
  assert.equal(policy.opportunitySchema.safeParse(good).success,true)

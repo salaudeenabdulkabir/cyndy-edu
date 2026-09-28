@@ -73,3 +73,23 @@ Run `npm test`, `npm run typecheck`, `npm run lint` and `npm run build`.
 `scripts/test-redesign.sql` checks duplicate checkout, independent applications, immutable price/account snapshots, payment isolation, notifications and application-specific waivers. Its fixtures roll back through a caught subtransaction exception. Run it only against an isolated test branch.
 
 Receipt and document storage stay private. Session tokens are refreshed for the new UI's API calls and restricted to same-origin `/api/` destinations. Server-side checks remain authoritative for ownership, admin PIN access, accepted file signatures, mandatory documents, payment and submission status.
+
+## Follow-up usability checks
+
+- Review & Submit lists each missing required document and links back to its upload section. Optional documents do not count as missing requirements. Personal-information validation matches the server, including email format.
+- Document checklist shows existing opportunity assignments and their required/optional settings. Editing restores the current assignment; selecting another opportunity adds an assignment, keeping existing links. Shared document wording/placement changes affect every linked opportunity.
+- Worker, status and staff sign-in requests use the same refreshed-session API helper as the applicant wizard. Worker document links remain available after reviewing documents or saving notes.
+- Payment screens spell out the payer country and label the fee as Cyndy application assistance.
+- Support is public so applicants can contact the business even when they cannot sign in.
+
+### Remaining hands-on acceptance checks
+
+Use test accounts and labelled dummy files only on localhost:3002. Keep private credentials out of chat.
+
+1. Applicant: select an open test opportunity, verify the fee for the paying country, upload a dummy receipt, save academic/personal details and confirm they survive refresh.
+2. Admin: verify the dummy receipt, then check only that application's payment becomes confirmed. Reject a separate test receipt and verify replacement is possible.
+3. Applicant: check academic/language uploads in their sections; Review & Submit should name missing documents and take you to the right section. A waived requirement should stop blocking submission.
+4. Worker: sign in with a test worker account, complete the required password change personally, verify only assigned applications are listed, save notes and review a dummy document. Its download link should remain usable.
+5. Mobile: at 390 px, check the applicant Sections drawer, all seven steps, receipt upload, document upload, and review links; confirm no page-wide horizontal scrolling.
+
+The latest code/build tests pass, but this final signed-in browser walkthrough remains pending. Local submission is still gated by the existing legal-policy configuration; this has not been bypassed. Public launch also requires approved real prices, bank details and policy terms.

@@ -1,6 +1,8 @@
 'use client'
+import { usePortalFetch } from '@/lib/use-portal-fetch'
 import { useState } from 'react'
 export default function ChangePassword() {
+  const fetch = usePortalFetch()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   return <main className="mx-auto max-w-lg px-6 py-20"><h1 className="font-heading text-4xl font-bold text-navy">Set your own password</h1><p className="mt-4 text-text-secondary">Replace your temporary password before accessing assigned applications.</p>

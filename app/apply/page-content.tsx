@@ -86,18 +86,18 @@ export function ApplyPageContent() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-text-secondary">Loading your application...</p>
         </div>
-      </div>
+      </main>
     )
   }
 
   if (error || !applicationId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-6">
+      <main className="min-h-screen flex items-center justify-center bg-background px-6">
         <div className="max-w-md text-center">
           <h1 className="text-2xl font-semibold text-text-primary">We could not open your application</h1>
           <p className="mt-3 text-text-secondary">{error || 'Please try again.'}</p>
@@ -109,7 +109,7 @@ export function ApplyPageContent() {
             Try again
           </button>
         </div>
-      </div>
+      </main>
     )
   }
 
@@ -119,10 +119,10 @@ export function ApplyPageContent() {
       <WizardHeader />
       <WizardSidebar />
       <MobileWizardNav />
-      <div className="pt-44 md:pt-16">
+      <main id="main-content" className="pt-44 md:pt-16">
       {availableApps.length > 1 && <div className="ml-0 px-5 pt-5 md:ml-64"><label className="text-sm font-semibold">Application<select className="ml-3" value={applicationId} onChange={event => { window.location.href = '/apply?application=' + encodeURIComponent(event.target.value) }}>{availableApps.map(item => <option key={item.id} value={item.id}>{item.referenceNo}</option>)}</select></label></div>}
       <WizardContent />
-      </div>
+      </main>
 
     </WizardProvider>
   )

@@ -15,6 +15,8 @@ test('support is public without exposing private applicant routes',async()=>{
  })
  const response=await route.default(()=>{throw Error('support must not require login')},{method:'GET',nextUrl:{pathname:'/support'}})
  assert.equal(response.status,200)
+ const robotsResponse=await route.default(()=>{throw Error('robots.txt must not require login')},{method:'GET',nextUrl:{pathname:'/robots.txt'}})
+ assert.equal(robotsResponse.status,200)
  const privateResponse=await route.default(async()=>({userId:null}),{method:'GET',nextUrl:{pathname:'/api/applications'},url:'http://localhost/api/applications'})
  assert.equal(privateResponse.status,401)
 })

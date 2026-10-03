@@ -24,6 +24,11 @@ export const opportunitySchema = z.object({
   opportunityStatus: z.enum(['draft', 'open', 'closed']),
 }).strict()
 export const DOCUMENT_SECTIONS = ['personal', 'academic', 'language', 'admissions', 'supporting'] as const
+// Opportunity orders collect their payment receipt separately from application documents.
+// Preserve the legacy global Receipt requirement for package applications only.
+export function appliesToApplicationDocuments(requirement: { name: string; global: boolean | null }, opportunityPurchase: boolean) {
+  return !opportunityPurchase || !requirement.global || requirement.name.trim().toLowerCase() !== 'receipt'
+}
 export function requirementSatisfied(id: string, documents: Array<{documentTypeId: string; status: string | null}>, waivers: Array<{documentTypeId: string}>) {
   return waivers.some(item => item.documentTypeId === id) || documents.some(item => item.documentTypeId === id && ['uploaded', 'verified'].includes(item.status ?? ''))
 }

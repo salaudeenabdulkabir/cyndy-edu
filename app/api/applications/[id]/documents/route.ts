@@ -12,6 +12,7 @@ import { applicationDocuments, applications, documentTypes, programDocuments, us
 import { buildDocumentKey, deleteFile, getSignedDownloadUrl, isStorageConfigured, r2Client } from '@/lib/r2'
 
 import { ensureClientProfile as getUser } from '@/lib/client-profile'
+import { appliesToApplicationDocuments } from '@/lib/opportunity-policy'
 
 export async function GET(_request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
@@ -41,7 +42,7 @@ export async function GET(_request: Request, { params: paramsPromise }: { params
     })
     const waivers = await db.query.documentWaivers.findMany({ where: eq(documentWaivers.applicationId, application.id) })
     return NextResponse.json({
-      requirements: requirements.map((item) => ({ ...item, isMandatory: item.isGlobal || item.isMandatory === true, waived: waivers.some(waiver => waiver.documentTypeId === item.id) })),
+      requirements: requirements.filter(item => appliesToApplicationDocuments({ name: item.name, global: item.isGlobal }, Boolean(application.opportunityPurchase))).map((item) => ({ ...item, isMandatory: item.isGlobal || item.isMandatory === true, waived: waivers.some(waiver => waiver.documentTypeId === item.id) })),
       documents: await Promise.all(documents.map(async (document) => ({
         ...document,
         fileUrl: await getSignedDownloadUrl(document.r2Key, 3600),
@@ -75,7 +76,7 @@ export async function POST(request: Request, { params: paramsPromise }: { params
     }
 
     const requirement = await db.query.documentTypes.findFirst({ where: eq(documentTypes.id, documentTypeId) })
-    if (!requirement || (!requirement.isGlobal && !application.programId)) return NextResponse.json({ error: 'Document type is not required for this application', code: 'DOCUMENT_NOT_REQUIRED' }, { status: 400 })
+    if (!requirement || !appliesToApplicationDocuments({ name: requirement.name, global: requirement.isGlobal }, Boolean(application.opportunityPurchase)) || (!requirement.isGlobal && !application.programId)) return NextResponse.json({ error: 'Document type is not required for this application', code: 'DOCUMENT_NOT_REQUIRED' }, { status: 400 })
     if (!requirement.isGlobal && application.programId) {
       const linked = await db.query.programDocuments.findFirst({ where: and(eq(programDocuments.programId, application.programId), eq(programDocuments.documentTypeId, documentTypeId)) })
       if (!linked) return NextResponse.json({ error: 'Document type is not required for this application', code: 'DOCUMENT_NOT_REQUIRED' }, { status: 400 })

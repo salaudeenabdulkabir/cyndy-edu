@@ -83,6 +83,14 @@ test('document readiness requires valid upload or waiver for the exact document'
  assert.equal(policy.requirementSatisfied('a',[],[{documentTypeId:'b'}]),false)
  assert.equal(policy.requirementSatisfied('a',[],[{documentTypeId:'a'}]),true)
 })
+test('opportunity payment receipt does not become a second document requirement',()=>{
+ const applies=policy.appliesToApplicationDocuments
+ assert.equal(applies({name:'Receipt',global:true},true),false)
+ assert.equal(applies({name:' receipt ',global:true},true),false)
+ assert.equal(applies({name:'Receipt',global:true},false),true)
+ assert.equal(applies({name:'Receipt',global:false},true),true)
+ assert.equal(applies({name:'Recommendation letter',global:true},true),true)
+})
 test('price changes, payment review and waivers reject non-admin access before database use',async()=>{
  const mocks={...next,'@/lib/opportunity-policy':policy,'@/lib/db/schema':dbSchema,'@/lib/db':{db:{}},'@/lib/r2':{},'@/lib/require-admin':{requireAdmin:async()=>({response:Response.json({error:'Forbidden'},{status:403})})}}
  for(const [file,method] of [['opportunity-prices','POST'],['opportunity-payments','PATCH'],['document-waivers','POST']]){

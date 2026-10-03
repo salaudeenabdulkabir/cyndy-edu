@@ -1,4 +1,4 @@
-import { requirementSatisfied } from '@/lib/opportunity-policy'
+import { appliesToApplicationDocuments, requirementSatisfied } from '@/lib/opportunity-policy'
 import { serverLog } from '@/lib/server-log'
 import { policiesApproved, stagingSubmissionsEnabled, POLICY_VERSION } from '@/lib/legal'
 import { z } from 'zod'
@@ -81,12 +81,12 @@ export async function PATCH(
       const missing = missingApplicationFields({ ...(app.applicationData ?? {}), ...formData })
       if (!app.programId && !app.customCourseText) missing.push('Program selection')
       if (!body.confirmed || !body.termsAccepted) missing.push('Declarations')
-      const required = await db.select({ id: documentTypes.id, global: documentTypes.isGlobal, mandatory: programDocuments.isMandatory }).from(documentTypes)
+      const required = await db.select({ id: documentTypes.id, name: documentTypes.name, global: documentTypes.isGlobal, mandatory: programDocuments.isMandatory }).from(documentTypes)
         .leftJoin(programDocuments, and(eq(programDocuments.documentTypeId, documentTypes.id), app.programId ? eq(programDocuments.programId, app.programId) : sql`false`))
         .where(or(eq(documentTypes.isGlobal, true), app.programId ? eq(programDocuments.programId, app.programId) : sql`false`))
       const documents = await db.query.applicationDocuments.findMany({ where: eq(applicationDocuments.applicationId, app.id) })
       const waivers = await db.query.documentWaivers.findMany({ where: eq(documentWaivers.applicationId, app.id) })
-      if (required.some(item => (item.global || item.mandatory) && !requirementSatisfied(item.id, documents, waivers))) missing.push('Required documents')
+      if (required.some(item => appliesToApplicationDocuments(item, Boolean(app.opportunityPurchase)) && (item.global || item.mandatory) && !requirementSatisfied(item.id, documents, waivers))) missing.push('Required documents')
       if (missing.length) return NextResponse.json({ error: 'Complete: ' + missing.join(', '), code: 'INCOMPLETE_APPLICATION' }, { status: 400 })
       const testSubmission = stagingSubmissionsEnabled()
       if (!policiesApproved() && !testSubmission) return NextResponse.json({ error: 'Applications will open after our service terms are finalized.', code: 'POLICIES_PENDING' }, { status: 503 })

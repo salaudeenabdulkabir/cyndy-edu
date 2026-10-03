@@ -5,7 +5,7 @@ import { and, eq, or, sql, isNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { opportunityPrices, programs, universities, countries, applicationOrders, documentTypes, programDocuments } from '@/lib/db/schema'
 import { ensureClientProfile } from '@/lib/client-profile'
-import { checkoutSchema } from '@/lib/opportunity-policy'
+import { appliesToApplicationDocuments, checkoutSchema } from '@/lib/opportunity-policy'
 
 export async function GET() {
   const { userId } = await auth()
@@ -21,7 +21,7 @@ export async function GET() {
       .where(and(eq(programs.isActive, true), eq(programs.opportunityStatus, 'open'), or(isNull(programs.universityId), and(eq(universities.isAcceptingApplications, true), eq(countries.isActive, true))), or(sql`${programs.deadline} IS NULL`, sql`${programs.deadline} >= CURRENT_DATE`)))
     const orders = await db.select({ applicationId: applicationOrders.applicationId, amount: applicationOrders.amount, currency: applicationOrders.currency, status: applicationOrders.status }).from(applicationOrders).where(eq(applicationOrders.clientId, client.id))
     const requirements = await db.select({name:documentTypes.name,description:documentTypes.description,global:documentTypes.isGlobal,programId:programDocuments.programId,mandatory:programDocuments.isMandatory}).from(documentTypes).leftJoin(programDocuments,eq(programDocuments.documentTypeId,documentTypes.id))
-    return NextResponse.json({ offers, orders, requirements })
+    return NextResponse.json({ offers, orders, requirements: requirements.filter(item => appliesToApplicationDocuments(item, true)) })
   } catch (error) { serverLog('Opportunities load',error); return NextResponse.json({ error: 'Unable to load opportunities. Please try again.' }, { status: 503 }) }
 }
 export async function POST(request: Request) {

@@ -1,9 +1,10 @@
 'use client'
+import { usePortalFetch } from '@/lib/use-portal-fetch'
 import OpportunityManager from '../opportunity-manager'
 import DocumentManager from '../document-manager'
 import PackageEditor from '../package-editor'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Check, CircleDollarSign, FileText, LoaderCircle, LogOut, Search, UserPlus, Users, X } from 'lucide-react'
 import { useClerk } from '@clerk/nextjs'
 import CatalogManager from '../catalog-manager'
@@ -44,6 +45,7 @@ interface AdminWorker extends WorkerOption { email: string | null; lastSeen: str
 interface AdminClient { id: string; packageId: string | null; firstName: string | null; lastName: string | null; email: string | null; phone: string | null; joinedAt: string | null; totalApplications: number | null; amountPaid: string | null; currency: string | null; paymentConfirmed: boolean | null; applicationCount: number }
 
 export default function AdminDashboard() {
+  const fetch = usePortalFetch()
   const { signOut } = useClerk()
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,7 +68,7 @@ export default function AdminDashboard() {
   const [clientSearch, setClientSearch] = useState('')
   const [clientPayment, setClientPayment] = useState('all')
 
-  const loadReceipts = async () => {
+  const loadReceipts = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -79,11 +81,11 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [fetch])
 
   useEffect(() => {
     void loadReceipts()
-  }, [])
+  }, [loadReceipts])
 
   const updateReceipt = async (receiptId: string, action: 'confirm' | 'reject') => {
     const reason = action === 'reject' ? window.prompt('Why is this receipt being rejected?')?.trim() : undefined
@@ -222,7 +224,7 @@ export default function AdminDashboard() {
           <button type="button" onClick={() => { setActiveTab('workers'); void loadWorkers() }} className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeTab === 'workers' ? 'border-gold text-navy' : 'border-transparent text-text-secondary'}`}>Workers</button>
           <button type="button" onClick={() => { setActiveTab('clients'); void loadClients() }} className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeTab === 'clients' ? 'border-gold text-navy' : 'border-transparent text-text-secondary'}`}>Clients</button>
         </div>
-        <div className="mb-5 flex gap-5 text-sm"><button type="button" onClick={() => setActiveTab('documents')} className="underline">Document checklist</button><a href="/api/admin/export" className="underline">Export applications (CSV)</a><a href="/admin/audit" className="underline">Audit records</a><a href="/notifications" className="underline">Notifications</a></div>
+        <div className="mb-5 flex flex-wrap gap-x-5 gap-y-3 text-sm"><button type="button" onClick={() => setActiveTab('documents')} className="underline">Document checklist</button><a href="/api/admin/export" className="underline">Export applications (CSV)</a><a href="/admin/audit" className="underline">Audit records</a><a href="/notifications" className="underline">Notifications</a></div>
         {activeTab === 'opportunities' ? <OpportunityManager /> : activeTab === 'documents' ? <DocumentManager /> : activeTab === 'catalog' ? <CatalogManager /> : activeTab === 'clients' ? <section>
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-gold">Clients &amp; packages</p><h1 className="mt-2 font-heading text-4xl font-bold text-navy">Client directory</h1><p className="mt-2 text-text-secondary">Review client accounts, packages, and payment status.</p>
           <div className="mt-8 grid gap-3 sm:grid-cols-[1fr_220px]"><label className="relative"><Search className="absolute left-3 top-3 text-text-secondary" size={17} strokeWidth={1.5} /><input value={clientSearch} onChange={(event) => setClientSearch(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void loadClients() }} placeholder="Search name or email" className="w-full pl-10" /></label><select value={clientPayment} onChange={(event) => { setClientPayment(event.target.value); void loadClients(event.target.value) }} aria-label="Filter clients by payment"><option value="all">All payment statuses</option><option value="confirmed">Payment confirmed</option><option value="pending">Payment pending</option></select></div>

@@ -1,15 +1,15 @@
 # Cyndy Educational Pathways — project handbook
 
-Cyndy is a Next.js application for international education applications, payment-receipt review, document collection, staff processing and applicant updates. The current hosted staging site uses GitLab → Render; see [RENDER-STAGING.md](RENDER-STAGING.md). Older Vercel instructions below describe an alternative deployment path.
+Cyndy is a Next.js application for international education applications, payment-receipt review, document collection, staff processing and applicant updates. GitHub is now the primary source repository. The existing Render test service is still connected to GitLab until its source is switched and verified; see [GITHUB-WORKFLOW.md](GITHUB-WORKFLOW.md) and [RENDER-STAGING.md](RENDER-STAGING.md).
 
-**Redesign preview:** [PORTAL-REDESIGN.md](PORTAL-REDESIGN.md) covers the new opportunity dashboard, country-specific prices, separate application payments, section-based documents and admin setup. It runs locally against an isolated database on port 3002. The existing online staging deployment has not been replaced. See [READINESS.md](READINESS.md) and [LAUNCH.md](LAUNCH.md) for public launch requirements.
+**Redesign preview:** [PORTAL-REDESIGN.md](PORTAL-REDESIGN.md) covers the new opportunity dashboard, country-specific prices, separate application payments, section-based documents and admin setup. It is deployed on the existing [Render test URL](https://cyndy-edu-staging.onrender.com/) with an isolated database and test credentials. See [QA-REPORT-2026-10-03.md](QA-REPORT-2026-10-03.md) for launch gates.
 
 ## 1. Where everything lives
 
 | System | Responsibility |
 | --- | --- |
-| [GitLab project](https://gitlab.com/voltage-group1/cyndy-edu) | Source code and GitLab CI pipeline |
-| Vercel | Builds, deployment URLs, runtime environment variables and scheduled job |
+| [GitHub project](https://github.com/salaudeenabdulkabir/cyndy-edu) | Primary source code, pull requests and GitHub Actions |
+| Render | Current Next.js test deployment, URL and runtime environment variables |
 | Clerk | Accounts, passwords, verification, sessions and identity webhooks |
 | Neon Postgres | Profiles, application answers, packages, catalog, receipts, notifications and audit records |
 | Cloudflare R2 | Private document and receipt objects |
@@ -17,7 +17,7 @@ Cyndy is a Next.js application for international education applications, payment
 | Resend | Outgoing application notification emails |
 | Your laptop | Local Next.js server; it still connects to the online services above |
 
-Moving from GitHub to GitLab does not require rewriting the application. It does not copy hosting secrets or fix missing credentials. GitHub Actions and GitLab CI are separate; `.gitlab-ci.yml` provides the checks for GitLab. Vercel's native GitLab integration can deploy directly without a Vercel API token in GitLab CI. Automatic deployment is not proof that the GitLab pipeline passed; review both before promoting a release.
+The GitLab repository is retained as a historical backup during the move. GitHub Actions runs repository checks; Render builds and hosts the test service. Neither Git remote carries hosting secrets, and a successful deployment does not replace acceptance testing.
 
 ## 2. All screens and access paths
 
@@ -192,21 +192,17 @@ Do not configure obsolete `NEXT_PUBLIC_ADMIN_PIN`, public R2 URLs or unused Uplo
 7. Verify sign-in and dependency behavior on the new deployment before directing applicants to it.
 8. For rotation, create replacement credentials, update the correct scopes, redeploy/test and revoke the old credentials according to the provider's rotation process. Previously exposed credentials remain a launch blocker.
 
-## 6. GitLab → Vercel, step by step
+## 6. GitHub → Render, step by step
 
-1. Confirm the GitLab project contains this latest code, `package.json`, `package-lock.json`, `vercel.json`, migration files and `.gitlab-ci.yml`.
-2. Do not import `.env.local`, `.env.staging.local`, `node_modules` or `.next`. Run `npm run check:secrets` before a push.
-3. Add the GitLab remote if it is missing: `git remote add gitlab https://gitlab.com/voltage-group1/cyndy-edu.git`. Inspect `git remote -v`; keep GitHub as an optional archive until the switch is verified.
-4. Fetch GitLab and compare its default branch with the local branch before pushing. Do not force-push over changes made in GitLab. Resolve differences in a reviewed merge.
-5. In GitLab → Build/Pipelines, run/check the pipeline. `.gitlab-ci.yml` uses Node 22 and dummy build credentials; no production secrets are required for those checks. Runner availability/verification and usage limits belong to GitLab and must be checked in that account.
-6. In Vercel, confirm the linked GitLab project, production branch and root directory `./`; framework is Next.js. Keep unrelated older Cyndy projects separate.
-7. Use Node 22, `npm ci` and the repository's `npm run build:vercel` command. The production guard intentionally rejects missing live setup.
-8. Configure variables as above. Use a commercial-eligible Vercel plan for this business and an owned domain for Clerk production. GitLab does not change those requirements.
-9. Add the domain in Vercel Settings → Domains, then follow Vercel and Clerk DNS verification instructions.
-10. Deploy a protected test preview and run the acceptance checklist. Review GitLab's pipeline result and Vercel's build logs separately.
-11. Promote the verified release only after migrations, storage/privacy, policies and authenticated tests pass. Record the exact commit and deployment URL.
+1. Work on `codex/portal-opportunity-redesign` until its acceptance checks pass. GitHub `main` retains the earlier staging baseline; do not merge the redesign merely because it builds.
+2. Keep `.env.local`, `.env.staging.local`, `node_modules` and `.next` out of Git. Run `npm run check:secrets` before pushing.
+3. Push reviewed changes to [GitHub](https://github.com/salaudeenabdulkabir/cyndy-edu) and check **Actions → Release checks**. The workflow uses Node 22 and dummy build values; it does not need live credentials.
+4. In [Render service settings](https://dashboard.render.com/web/srv-daol403bc2fs73ef6fig/settings), set **Build → Source** to the GitHub repository and **Branch** to `codex/portal-opportunity-redesign`. Keep the existing test environment values and build/start commands. Verify the GitHub commit shown on **Deploys** is live before testing. See [GITHUB-WORKFLOW.md](GITHUB-WORKFLOW.md) for the current connection status.
+5. Test client, administrator and worker flows on the isolated Render service using dummy accounts and the [QA checklist](QA-REPORT-2026-10-03.md). Do not treat the demo payment information as real.
+6. For a public launch, prepare a separate production environment with approved policies, genuine country-specific prices and payment accounts, live Clerk and webhook configuration, reviewed database migrations and backups, private storage, email sender and notification scheduling. Run `npm run check:production` against its actual environment.
+7. Only after the full acceptance pass, merge the reviewed pull request to `main`, deploy the selected production commit, verify it on the live domain and update the Cloudflare Pages landing link.
 
-Official references: [Vercel GitLab integration](https://vercel.com/docs/git/vercel-for-gitlab), [Vercel environment variables](https://vercel.com/docs/environment-variables), [Clerk sign-in component](https://clerk.com/docs/reference/components/authentication/sign-in).
+The older Vercel settings above remain a reference if you later choose Vercel. They do not configure the current Render deployment. [Clerk sign-in documentation](https://clerk.com/docs/reference/components/authentication/sign-in) explains the authentication component used here.
 
 ## 7. Database, webhooks, documents and email
 

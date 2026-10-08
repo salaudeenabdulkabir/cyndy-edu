@@ -6,7 +6,7 @@ URL: https://cyndy-edu-staging.onrender.com
 
 Dashboard: https://dashboard.render.com/web/srv-daol403bc2fs73ef6fig
 
-Source: GitLab `voltage-group1/cyndy-edu`, branch `codex/portal-opportunity-redesign`. The public information site remains on Cloudflare Pages and is a separate deployment.
+Source: GitHub `salaudeenabdulkabir/cyndy-edu`, branch `codex/portal-opportunity-redesign`. The public information site remains on Cloudflare Pages and is a separate deployment.
 
 ## Build configuration
 
@@ -45,9 +45,9 @@ Free services sleep after inactivity; a slow first visit can be a cold start. A 
 
 ## Corrections and redeployments
 
-To manage API keys later, open the Render dashboard link above, choose **Environment**, then edit the relevant variable and save/redeploy. Use separate test credentials here. Never add secret values to source files, GitLab, screenshots, or this guide. Only variables intended for the browser may use the `NEXT_PUBLIC_` prefix.
+To manage API keys later, open the Render dashboard link above, choose **Environment**, then edit the relevant variable and save/redeploy. Use separate test credentials here. Never add secret values to source files, GitHub, screenshots, or this guide. Only variables intended for the browser may use the `NEXT_PUBLIC_` prefix.
 
-Edit and verify locally, then commit and push to GitLab. Inspect the Render Deploys page for the exact commit and successful build before testing. Do not put `.env.local` into Git or enable production services simply to make a staging test pass.
+Edit and verify locally, then commit and push to GitHub. Inspect the Render Deploys page for the exact commit and successful build before testing. Do not put `.env.local` into Git or enable production services simply to make a staging test pass.
 
 
 Storage verification: Render deployed `db65780` successfully. The applicant portal accepted `cyndy-staging-upload-test.pdf` (clearly marked STAGING TEST, not a real receipt) into the empty Receipt document slot for application 2026-003, showing 1 of 1 uploaded and Pending review. This is a dummy document, not evidence of payment; replace it with a genuine document before any real processing.
@@ -62,5 +62,5 @@ The opportunity redesign is live on this Render service from `codex/portal-oppor
 2. Review the actual refund/cancellation rules, privacy notice and document-retention schedule with the business owner. Publish only approved text and set `LEGAL_POLICIES_APPROVED=true` only after approval and a fresh legal/submission test.
 3. Rehearse the full applicant, admin and worker journeys on this isolated service using dummy accounts: registration, draft save/reload, document upload and review, receipt rejection/replacement/confirmation, worker first password change and assignment, submission, audit records and notifications. Use the checklist in [README.md](README.md#8-acceptance-checklist-before-opening-registration).
 4. Prepare live services separately: an owned domain, Clerk production instance and webhook, production Neon database with reviewed migrations and backup/restore, private production R2 bucket with scoped credentials, Upstash, a verified Resend sending domain and notification job secret. Add server secrets in **Render → cyndy-edu-staging → Environment** only if deliberately converting this service; preferably create a distinct production service so the test site remains usable. Never commit populated env files.
-5. Before public opening, verify live configuration with `npm run check:production`, run `npm run check:secrets`, `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build`, and inspect the Render deployment for the exact GitLab commit. Confirm private-file access and malware-handling controls for real uploads; the current signature and MIME checks are not malware scanning.
+5. Before public opening, verify live configuration with `npm run check:production`, run `npm run check:secrets`, `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build`, and inspect the Render deployment for the exact GitHub commit. Confirm private-file access and malware-handling controls for real uploads; the current signature and MIME checks are not malware scanning.
 6. Run a final live-domain acceptance pass with test accounts, then direct visitors from the Cloudflare Pages landing page to the new portal URL. Keep email delivery disabled until a controlled recipient test passes. Monitor Render logs, auth errors, uploads and failed notification jobs after opening.

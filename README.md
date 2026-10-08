@@ -1,6 +1,6 @@
 # Cyndy Educational Pathways — project handbook
 
-Cyndy is a Next.js application for international education applications, payment-receipt review, document collection, staff processing and applicant updates. GitHub is now the primary source repository. The existing Render test service is still connected to GitLab until its source is switched and verified; see [GITHUB-WORKFLOW.md](GITHUB-WORKFLOW.md) and [RENDER-STAGING.md](RENDER-STAGING.md).
+Cyndy is a Next.js application for international education applications, payment-receipt review, document collection, staff processing and applicant updates. GitHub is the primary source repository and the Render test service deploys its redesign branch; see [GITHUB-WORKFLOW.md](GITHUB-WORKFLOW.md) and [RENDER-STAGING.md](RENDER-STAGING.md).
 
 **Redesign preview:** [PORTAL-REDESIGN.md](PORTAL-REDESIGN.md) covers the new opportunity dashboard, country-specific prices, separate application payments, section-based documents and admin setup. It is deployed on the existing [Render test URL](https://cyndy-edu-staging.onrender.com/) with an isolated database and test credentials. See [QA-REPORT-2026-10-03.md](QA-REPORT-2026-10-03.md) for launch gates.
 
@@ -79,7 +79,7 @@ The wizard includes autosave state, retry/recovery behavior, completion progress
 
 ## 3. Login credentials — there is no default admin password
 
-Do not use placeholder emails from examples as real credentials. There is no universal admin, worker or client password. Clerk stores account passwords; the application database stores role/profile information. Never put passwords, PINs or API secrets in this README or GitLab.
+Do not use placeholder emails from examples as real credentials. There is no universal admin, worker or client password. Clerk stores account passwords; the application database stores role/profile information. Never put passwords, PINs or API secrets in this README or either Git remote.
 
 ### Client setup and login
 
@@ -194,13 +194,13 @@ Do not configure obsolete `NEXT_PUBLIC_ADMIN_PIN`, public R2 URLs or unused Uplo
 
 ## 6. GitHub → Render, step by step
 
-1. Work on `codex/portal-opportunity-redesign` until its acceptance checks pass. GitHub `main` retains the earlier staging baseline; do not merge the redesign merely because it builds.
+1. Work on `codex/portal-opportunity-redesign` for the current Render test service. Pull request #1 was merged into GitHub `main` on 8 October 2026, but that merge did not complete public-launch acceptance or production configuration.
 2. Keep `.env.local`, `.env.staging.local`, `node_modules` and `.next` out of Git. Run `npm run check:secrets` before pushing.
 3. Push reviewed changes to [GitHub](https://github.com/salaudeenabdulkabir/cyndy-edu) and check **Actions → Release checks**. The workflow uses Node 22 and dummy build values; it does not need live credentials.
-4. In [Render service settings](https://dashboard.render.com/web/srv-daol403bc2fs73ef6fig/settings), set **Build → Source** to the GitHub repository and **Branch** to `codex/portal-opportunity-redesign`. Keep the existing test environment values and build/start commands. Verify the GitHub commit shown on **Deploys** is live before testing. See [GITHUB-WORKFLOW.md](GITHUB-WORKFLOW.md) for the current connection status.
+4. The [Render test service](https://dashboard.render.com/web/srv-daol403bc2fs73ef6fig/settings) now builds from this GitHub repository and `codex/portal-opportunity-redesign`. Keep its separate test environment values and build/start commands. Verify each new GitHub commit is **Live** on **Deploys** before testing. See [GITHUB-WORKFLOW.md](GITHUB-WORKFLOW.md) for the connection status.
 5. Test client, administrator and worker flows on the isolated Render service using dummy accounts and the [QA checklist](QA-REPORT-2026-10-03.md). Do not treat the demo payment information as real.
 6. For a public launch, prepare a separate production environment with approved policies, genuine country-specific prices and payment accounts, live Clerk and webhook configuration, reviewed database migrations and backups, private storage, email sender and notification scheduling. Run `npm run check:production` against its actual environment.
-7. Only after the full acceptance pass, merge the reviewed pull request to `main`, deploy the selected production commit, verify it on the live domain and update the Cloudflare Pages landing link.
+7. Only after the full acceptance pass, merge any remaining reviewed fixes, deploy the selected production commit with production configuration, verify it on the live domain and update the Cloudflare Pages landing link.
 
 The older Vercel settings above remain a reference if you later choose Vercel. They do not configure the current Render deployment. [Clerk sign-in documentation](https://clerk.com/docs/reference/components/authentication/sign-in) explains the authentication component used here.
 

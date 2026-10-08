@@ -20,7 +20,7 @@ To update it:
 2. Zip the **contents** of `public-site/`, with `index.html` at the archive root.
 3. In Cloudflare, open Workers & Pages → `cyndy-educational-pathways` → Create a new deployment.
 4. Upload the zip and deploy, then verify the public pages and contact link.
-5. Commit the source changes to GitLab. Direct Upload does not automatically deploy GitLab commits. It can later be automated with Wrangler/CI; switching this project to native Git integration requires a new Pages project.
+5. Commit the source changes to GitHub. Direct Upload does not automatically deploy GitHub commits. It can later be automated with Wrangler/CI; switching this project to native Git integration requires a new Pages project.
 
 The support address is `cyndyeducationalpathways7@gmail.com`. The contact link opens the visitor's email application; it is not an online form and does not send a message automatically.
 

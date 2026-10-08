@@ -194,13 +194,13 @@ Do not configure obsolete `NEXT_PUBLIC_ADMIN_PIN`, public R2 URLs or unused Uplo
 
 ## 6. GitHub → Render, step by step
 
-1. Work on `codex/portal-opportunity-redesign` until its acceptance checks pass. GitHub `main` retains the earlier staging baseline; do not merge the redesign merely because it builds.
+1. Work on `codex/portal-opportunity-redesign` for the current Render test service. Pull request #1 was merged into GitHub `main` on 8 October 2026, but that merge did not complete public-launch acceptance or production configuration.
 2. Keep `.env.local`, `.env.staging.local`, `node_modules` and `.next` out of Git. Run `npm run check:secrets` before pushing.
 3. Push reviewed changes to [GitHub](https://github.com/salaudeenabdulkabir/cyndy-edu) and check **Actions → Release checks**. The workflow uses Node 22 and dummy build values; it does not need live credentials.
 4. The [Render test service](https://dashboard.render.com/web/srv-daol403bc2fs73ef6fig/settings) now builds from this GitHub repository and `codex/portal-opportunity-redesign`. Keep its separate test environment values and build/start commands. Verify each new GitHub commit is **Live** on **Deploys** before testing. See [GITHUB-WORKFLOW.md](GITHUB-WORKFLOW.md) for the connection status.
 5. Test client, administrator and worker flows on the isolated Render service using dummy accounts and the [QA checklist](QA-REPORT-2026-10-03.md). Do not treat the demo payment information as real.
 6. For a public launch, prepare a separate production environment with approved policies, genuine country-specific prices and payment accounts, live Clerk and webhook configuration, reviewed database migrations and backups, private storage, email sender and notification scheduling. Run `npm run check:production` against its actual environment.
-7. Only after the full acceptance pass, merge the reviewed pull request to `main`, deploy the selected production commit, verify it on the live domain and update the Cloudflare Pages landing link.
+7. Only after the full acceptance pass, merge any remaining reviewed fixes, deploy the selected production commit with production configuration, verify it on the live domain and update the Cloudflare Pages landing link.
 
 The older Vercel settings above remain a reference if you later choose Vercel. They do not configure the current Render deployment. [Clerk sign-in documentation](https://clerk.com/docs/reference/components/authentication/sign-in) explains the authentication component used here.
 

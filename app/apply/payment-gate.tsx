@@ -1,9 +1,11 @@
 'use client'
+import { usePortalFetch } from '@/lib/use-portal-fetch'
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode, ChangeEvent } from 'react'
 import { LockKeyhole, FileText, LoaderCircle } from 'lucide-react'
 import { UserButton } from '@clerk/nextjs'
 export function PaymentGate({ applicationId, children }: { applicationId: string; children: ReactNode }) {
+  const fetch = usePortalFetch()
   const [fileName, setFileName] = useState('')
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<'loading' | 'pending' | 'uploaded' | 'confirmed'>('loading')
@@ -19,7 +21,7 @@ export function PaymentGate({ applicationId, children }: { applicationId: string
       setRejection(body.receipt?.rejectionReason ?? '')
       setError('')
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Unable to check payment status') }
-  }, [])
+  }, [fetch])
   useEffect(() => { void load(); const timer = setInterval(() => void load(), 30000); return () => clearInterval(timer) }, [load, applicationId])
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget
@@ -37,11 +39,11 @@ export function PaymentGate({ applicationId, children }: { applicationId: string
     finally { setBusy(false); input.value = '' }
   }
   if (status === 'confirmed') return <>{children}</>
-  return <main className="flex min-h-screen items-center justify-center bg-background p-4 sm:p-8">
+  return <main className="flex  items-center justify-center bg-background p-4 sm:p-8">
     <section className="w-full max-w-md rounded-2xl border border-border bg-white p-6 shadow-lg sm:p-10" aria-labelledby="payment-heading">
       <div className="mb-6 flex justify-between"><LockKeyhole className="text-gold" size={28} strokeWidth={1.5} /><UserButton afterSignOutUrl="/" /></div>
       <h1 id="payment-heading" className="font-heading text-3xl text-navy">{status === 'loading' ? 'Checking payment' : status === 'uploaded' ? 'Receipt received' : 'Payment confirmation required'}</h1>
-      <p className="mt-3 text-sm text-text-secondary">{status === 'uploaded' ? 'Your receipt is awaiting review. This page will update when your application is unlocked.' : 'Your application opens after our team confirms your payment.'}</p>
+      <p className="mt-3 text-sm text-text-secondary">{status === 'uploaded' ? 'Your receipt is awaiting review. You can complete the other sections now; final submission requires confirmed payment.' : 'Upload your receipt for your existing package. You can save and continue with the form while payment is reviewed.'}</p>
       {rejection && <p role="alert" className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-navy">Receipt needs attention: {rejection}. Please upload a replacement.</p>}
       {status === 'pending' && <label className="mt-6 block rounded-xl border border-dashed border-gold p-4"><span className="mb-3 flex items-center gap-2 text-sm font-semibold"><FileText size={18} strokeWidth={1.5} /> Upload payment receipt</span><input aria-label="Payment receipt" type="file" accept="application/pdf,image/jpeg,image/png" disabled={busy} onChange={upload} className="w-full min-w-0 text-sm" /><span className="mt-2 block text-xs text-text-secondary">PDF, JPG, or PNG · Up to 4MB</span></label>}
       {status === 'uploaded' && <p className="mt-5 break-words rounded-lg bg-blue-50 p-4 text-sm text-blue-900">{fileName}</p>}

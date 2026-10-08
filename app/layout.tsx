@@ -31,6 +31,9 @@ export const metadata: Metadata = {
   icons: {
     icon: '/icons/icon.svg', apple: '/icons/icon-180.png',
   },
+  robots: process.env.STAGING_SUBMISSIONS_ENABLED === 'true'
+    ? { index: false, follow: false }
+    : { index: true, follow: true },
 
 }
 

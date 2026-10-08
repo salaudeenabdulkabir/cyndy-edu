@@ -1,4 +1,5 @@
 'use client'
+import { usePortalFetch } from '@/lib/use-portal-fetch'
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 type SaveStatus = 'saved' | 'saving' | 'failed' | 'idle'
@@ -10,6 +11,7 @@ interface WizardContextType {
 }
 const WizardContext = createContext<WizardContextType | undefined>(undefined)
 export function WizardProvider({ children, applicationId }: { children: ReactNode; applicationId: string }) {
+  const fetch = usePortalFetch()
   const [currentSection, navigate] = useState(0)
   const [initialData, setInitialData] = useState<Record<string, unknown>>({})
   const [referenceNo, setReferenceNo] = useState('')
@@ -35,7 +37,7 @@ export function WizardProvider({ children, applicationId }: { children: ReactNod
             const response = await fetch('/api/applications/' + applicationId, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
             const body = await response.json()
             if (!response.ok) throw new Error(body.error || 'Unable to save your changes')
-            setInitialData({ ...(body.applicationData ?? {}), programId: body.programId, customCourseText: body.customCourseText })
+            setInitialData({ ...(body.applicationData ?? {}), programId: body.programId, customCourseText: body.customCourseText, opportunityPurchase: body.opportunityPurchase })
             setDeadline(body.deadline)
           } catch (failure) {
             pending.current = { ...payload, ...pending.current }
@@ -50,7 +52,7 @@ export function WizardProvider({ children, applicationId }: { children: ReactNod
     }
     running.current = drain()
     return running.current
-  }, [applicationId])
+  }, [applicationId, fetch])
   const queueSave = useCallback((data: Record<string, unknown>) => {
     pending.current = { ...pending.current, ...data }
     setIsDirty(true)
@@ -63,19 +65,19 @@ export function WizardProvider({ children, applicationId }: { children: ReactNod
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'Unable to restore your application')
       if (!cancelled) {
-        setInitialData({ ...(body.applicationData ?? {}), programId: body.programId, customCourseText: body.customCourseText })
+        setInitialData({ ...(body.applicationData ?? {}), programId: body.programId, customCourseText: body.customCourseText, opportunityPurchase: body.opportunityPurchase })
         setReferenceNo(body.referenceNo); setDeadline(body.deadline); setLoaded(true)
       }
     }).catch(error => { if (!cancelled) setError(error.message) })
     return () => { cancelled = true; clearTimeout(timer.current) }
-  }, [applicationId])
+  }, [applicationId, fetch])
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (isDirty) { event.preventDefault(); event.returnValue = '' } }
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
   }, [isDirty])
   const setCurrentSection = async (section: number) => {
-    if (section < 0 || section > 15 || section === currentSection) return
+    if (section < 0 || section > 6 || section === currentSection) return
     if (isDirty && !Object.keys(pending.current).length) { setError('Save your application choice before changing sections.'); return }
     if (await flushSave()) { navigate(section); window.scrollTo({ top: 0, behavior: 'instant' }) }
   }

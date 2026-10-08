@@ -1,6 +1,8 @@
 'use client'
+import { usePortalFetch } from '@/lib/use-portal-fetch'
 import { useState } from 'react'
 export default function PackageEditor({ clientId, initialTotal, onSaved }: { clientId: string; initialTotal: number; onSaved: () => void }) {
+  const fetch = usePortalFetch()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')

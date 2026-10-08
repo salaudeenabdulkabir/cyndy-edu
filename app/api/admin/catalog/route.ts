@@ -162,7 +162,7 @@ export async function PATCH(request: Request) {
         updatedAt: new Date(),
       }).where(eq(universities.id, parsed.data.id))
     } else {
-      await db.update(programs).set({ isActive: parsed.data.isActive, updatedAt: new Date() }).where(eq(programs.id, parsed.data.id))
+      await db.update(programs).set({ isActive: parsed.data.isActive, opportunityStatus: parsed.data.isActive ? 'open' : 'closed', updatedAt: new Date() }).where(eq(programs.id, parsed.data.id))
     }
     return NextResponse.json({ updated: true })
   } catch (error) {

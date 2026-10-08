@@ -95,15 +95,16 @@ test('upload content must match MIME type', () => {
   assert.equal(uploads.matchesFileSignature(Buffer.from('%PDF-1.7'), 'application/pdf'), true)
   assert.equal(uploads.matchesFileSignature(Buffer.alloc(0), 'image/png'), false)
 })
-function routeFixture({ active = true, owner = true, paid = true } = {}) {
+function routeFixture({ active = true, owner = true, paid = true, opportunity = false, deadline = null, status = 'draft' } = {}) {
   let writes = 0
   const user = { id: 'user', role: 'client', isActive: active }
-  const app = { id: '123e4567-e89b-42d3-a456-426614174000', clientId: owner ? 'user' : 'other', status: 'draft', paymentConfirmed: paid, applicationData: {} }
+  const app = { id: '123e4567-e89b-42d3-a456-426614174000', clientId: owner ? 'user' : 'other', status, deadline, opportunityPurchase: opportunity, paymentConfirmed: paid, applicationData: {} }
   const db = { query: { users: { findFirst: async () => user }, applications: { findFirst: async () => app } }, update: () => { writes++; return { set: () => ({ where: () => ({ returning: async () => [app] }) }) } } }
   const route = load('app/api/applications/[id]/route.ts', {
     '@clerk/nextjs/server': { auth: async () => ({ userId: 'clerk', sessionId: 'session' }) },
     '@/lib/db': { db }, '@/lib/db/schema': load('lib/db/schema.ts'),
     '@/lib/r2': { getSignedDownloadUrl: async () => '' },
+    '@/lib/opportunity-policy': load('lib/opportunity-policy.ts', {'./countries': load('lib/countries.ts')}),
     '@/lib/application-policy': policy, '@/lib/legal': { policiesApproved: () => false, stagingSubmissionsEnabled: () => false, POLICY_VERSION: 'test' },
     '@/lib/require-admin': { requireAdmin: async () => { throw new Error('Unexpected admin access') } },
     'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
@@ -120,11 +121,25 @@ test('deactivated clients cannot edit', async () => {
 test('clients cannot edit another client application', async () => {
   const fixture = routeFixture({ owner: false }); assert.equal((await fixture.patch({ firstName: 'Test' })).status, 404); assert.equal(fixture.writes(), 0)
 })
-test('payment gate is enforced by the API', async () => {
-  const fixture = routeFixture({ paid: false }); assert.equal((await fixture.patch({ firstName: 'Test' })).status, 403); assert.equal(fixture.writes(), 0)
+test('unpaid clients can save drafts but cannot submit', async () => {
+  const fixture = routeFixture({ paid: false }); assert.equal((await fixture.patch({ firstName: 'Test' })).status, 200); assert.equal(fixture.writes(), 1)
+  assert.equal((await fixture.patch({status:'submitted',confirmed:true,termsAccepted:true})).status,403); assert.equal(fixture.writes(),1)
 })
 test('paid clients can save their own draft fields', async () => {
   const fixture = routeFixture(); assert.equal((await fixture.patch({ firstName: 'Test' })).status, 200); assert.equal(fixture.writes(), 1)
+})
+test('a purchased opportunity cannot be switched to another program or a custom course', async () => {
+  const fixture=routeFixture({opportunity:true})
+  for(const body of [{programId:'123e4567-e89b-42d3-a456-426614174111'},{customCourseText:'Other course'}]) assert.equal((await fixture.patch(body)).status,409)
+  assert.equal(fixture.writes(),0)
+})
+test('expired and already-submitted applications cannot be submitted or edited by clients', async () => {
+  const expired=routeFixture({deadline:'2000-01-01'})
+  assert.equal((await expired.patch({status:'submitted',confirmed:true,termsAccepted:true})).status,409)
+  assert.equal(expired.writes(),0)
+  const submitted=routeFixture({status:'submitted'})
+  assert.equal((await submitted.patch({firstName:'Changed'})).status,403)
+  assert.equal(submitted.writes(),0)
 })
 
 function adminFixture(role, verified) {

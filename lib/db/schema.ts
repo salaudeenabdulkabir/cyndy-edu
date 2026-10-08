@@ -89,8 +89,12 @@ export const universities = pgTable('universities', {
 
 export const programs = pgTable('programs', {
   id: uuid('id').primaryKey().defaultRandom(),
-  universityId: uuid('university_id').notNull().references(() => universities.id, { onDelete: 'cascade' }),
+  universityId: uuid('university_id').references(() => universities.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
+  description: text('description').default(''),
+  destinationLabel: text('destination_label').default(''),
+  schoolLabel: text('school_label').default(''),
+  opportunityStatus: text('opportunity_status').default('open').notNull(),
   level: text('level'),
   field: text('field'),
   deadline: date('deadline'),
@@ -120,6 +124,7 @@ export const customCourseSuggestions = pgTable('custom_course_suggestions', {
 })
 
 export const documentTypes = pgTable('document_types', {
+  section: text('section').notNull().default('supporting'),
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   description: text('description'),
@@ -175,6 +180,7 @@ export const applicationSeq = pgTable('application_seq', {
 })
 
 export const applications = pgTable('applications', {
+  opportunityPurchase: boolean('opportunity_purchase').notNull().default(false),
   id: uuid('id').primaryKey().defaultRandom(),
   referenceNo: text('reference_no').unique().notNull(),
   clientId: uuid('client_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -202,6 +208,28 @@ export const applications = pgTable('applications', {
   statusIdx: index('idx_app_status').on(t.status),
   programIdx: index('idx_app_program').on(t.programId),
 }))
+
+export const opportunityPrices = pgTable('opportunity_prices', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  programId: uuid('program_id').notNull().references(() => programs.id, { onDelete: 'cascade' }),
+  payerCountry: text('payer_country').notNull(), amount: numeric('amount').notNull(), currency: text('currency').notNull(),
+  bankDetails: text('bank_details').notNull(), instructions: text('instructions').notNull().default(''), active: boolean('active').notNull().default(false),
+}, t => ({ countryPrice: unique().on(t.programId, t.payerCountry) }))
+
+export const applicationOrders = pgTable('application_orders', {
+  id: uuid('id').primaryKey().defaultRandom(), applicationId: uuid('application_id').notNull().unique().references(() => applications.id),
+  clientId: uuid('client_id').notNull().references(() => users.id), programId: uuid('program_id').notNull().references(() => programs.id),
+  payerCountry: text('payer_country').notNull(), amount: numeric('amount').notNull(), currency: text('currency').notNull(),
+  bankDetails: text('bank_details').notNull(), instructions: text('instructions').notNull(), status: text('status').notNull().default('awaiting_payment'),
+  receiptKey: text('receipt_key'), receiptName: text('receipt_name'), rejectionReason: text('rejection_reason'),
+  reviewedBy: uuid('reviewed_by').references(() => users.id), reviewedAt: timestamp('reviewed_at'), createdAt: timestamp('created_at').defaultNow(),
+}, t => ({ clientProgram: unique().on(t.clientId, t.programId) }))
+
+export const documentWaivers = pgTable('document_waivers', {
+  id: uuid('id').primaryKey().defaultRandom(), applicationId: uuid('application_id').notNull().references(() => applications.id),
+  documentTypeId: uuid('document_type_id').notNull().references(() => documentTypes.id), reason: text('reason').notNull(),
+  approvedBy: uuid('approved_by').notNull().references(() => users.id), createdAt: timestamp('created_at').defaultNow(),
+}, t => ({ applicationDocument: unique().on(t.applicationId, t.documentTypeId) }))
 
 export const notifications = pgTable('notifications', {
   id: uuid('id').primaryKey().defaultRandom(),

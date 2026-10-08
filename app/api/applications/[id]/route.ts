@@ -1,3 +1,4 @@
+import { appliesToApplicationDocuments, requirementSatisfied } from '@/lib/opportunity-policy'
 import { serverLog } from '@/lib/server-log'
 import { policiesApproved, stagingSubmissionsEnabled, POLICY_VERSION } from '@/lib/legal'
 import { z } from 'zod'
@@ -5,7 +6,7 @@ import { clientUpdateSchema, staffUpdateSchema, missingApplicationFields, client
 import { requireAdmin } from '@/lib/require-admin'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
-import { applications, users, programs, universities, countries, applicationDocuments, documentTypes, programDocuments } from '@/lib/db/schema'
+import { applications, users, programs, universities, countries, applicationDocuments, documentTypes, programDocuments, documentWaivers } from '@/lib/db/schema'
 import { and, eq, or, sql } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 import { getSignedDownloadUrl } from '@/lib/r2'
@@ -50,8 +51,9 @@ export async function PATCH(
     try { raw = JSON.parse(text) } catch { return NextResponse.json({ error: 'Invalid JSON', code: 'INVALID_INPUT' }, { status: 400 }) }
     const parsed = (role === 'client' ? clientUpdateSchema : staffUpdateSchema).safeParse(raw)
     if (!parsed.success) return NextResponse.json({ error: 'Invalid or forbidden application fields', code: 'INVALID_INPUT' }, { status: 400 })
-    if (role === 'client' && (!app.paymentConfirmed || app.status !== 'draft')) return NextResponse.json({ error: !app.paymentConfirmed ? 'Payment confirmation required' : 'Submitted applications cannot be edited', code: 'APPLICATION_LOCKED' }, { status: 403 })
+    if (role === 'client' && app.status !== 'draft') return NextResponse.json({ error: !app.paymentConfirmed ? 'Payment confirmation required' : 'Submitted applications cannot be edited', code: 'APPLICATION_LOCKED' }, { status: 403 })
     const body = parsed.data as Record<string, unknown>
+    if (app.opportunityPurchase && ('programId' in body || 'customCourseText' in body || 'universityId' in body || 'countryId' in body)) return NextResponse.json({ error: 'This application belongs to the opportunity you selected. Start a separate application for another opportunity.' }, { status: 409 })
     if (role === 'client' && body.status === 'submitted' && Object.keys(body).some(key => !['status', 'confirmed', 'termsAccepted'].includes(key))) return NextResponse.json({ error: 'Save your answers before submitting', code: 'INVALID_INPUT' }, { status: 400 })
     const updates: Record<string, unknown> = { lastSavedAt: new Date(), updatedAt: new Date() }
     const formData: Record<string, unknown> = {}
@@ -61,7 +63,7 @@ export async function PATCH(
     }
     if (body.programId) {
       const program = await db.query.programs.findFirst({ where: eq(programs.id, body.programId as string) })
-      const school = program && await db.query.universities.findFirst({ where: eq(universities.id, program.universityId) })
+      const school = program?.universityId ? await db.query.universities.findFirst({ where: eq(universities.id, program.universityId) }) : null
       const country = school && await db.query.countries.findFirst({ where: eq(countries.id, school.countryId) })
       if (!program?.isActive || !school?.isAcceptingApplications || !country?.isActive) return NextResponse.json({ error: 'This program is no longer accepting applications', code: 'PROGRAM_CLOSED' }, { status: 400 })
       updates.deadline = program.deadline
@@ -74,14 +76,17 @@ export async function PATCH(
       if (!school || !school.isAcceptingApplications || school.countryId !== body.countryId || !body.customCourseText) return NextResponse.json({ error: 'Select an available school and course', code: 'INVALID_SELECTION' }, { status: 400 })
     }
     if (role === 'client' && body.status === 'submitted') {
+      if (!app.paymentConfirmed) return NextResponse.json({ error: 'Payment must be confirmed before final submission', code: 'PAYMENT_REQUIRED' }, { status: 403 })
+      if (app.deadline && app.deadline < new Date().toISOString().slice(0,10)) return NextResponse.json({error:'The application deadline has passed. Contact Cyndy for guidance.',code:'DEADLINE_PASSED'},{status:409})
       const missing = missingApplicationFields({ ...(app.applicationData ?? {}), ...formData })
       if (!app.programId && !app.customCourseText) missing.push('Program selection')
       if (!body.confirmed || !body.termsAccepted) missing.push('Declarations')
-      const required = await db.select({ id: documentTypes.id, global: documentTypes.isGlobal, mandatory: programDocuments.isMandatory }).from(documentTypes)
+      const required = await db.select({ id: documentTypes.id, name: documentTypes.name, global: documentTypes.isGlobal, mandatory: programDocuments.isMandatory }).from(documentTypes)
         .leftJoin(programDocuments, and(eq(programDocuments.documentTypeId, documentTypes.id), app.programId ? eq(programDocuments.programId, app.programId) : sql`false`))
         .where(or(eq(documentTypes.isGlobal, true), app.programId ? eq(programDocuments.programId, app.programId) : sql`false`))
       const documents = await db.query.applicationDocuments.findMany({ where: eq(applicationDocuments.applicationId, app.id) })
-      if (required.some(item => (item.global || item.mandatory) && !documents.some(doc => doc.documentTypeId === item.id && ['uploaded', 'verified'].includes(doc.status ?? '')))) missing.push('Required documents')
+      const waivers = await db.query.documentWaivers.findMany({ where: eq(documentWaivers.applicationId, app.id) })
+      if (required.some(item => appliesToApplicationDocuments(item, Boolean(app.opportunityPurchase)) && (item.global || item.mandatory) && !requirementSatisfied(item.id, documents, waivers))) missing.push('Required documents')
       if (missing.length) return NextResponse.json({ error: 'Complete: ' + missing.join(', '), code: 'INCOMPLETE_APPLICATION' }, { status: 400 })
       const testSubmission = stagingSubmissionsEnabled()
       if (!policiesApproved() && !testSubmission) return NextResponse.json({ error: 'Applications will open after our service terms are finalized.', code: 'POLICIES_PENDING' }, { status: 503 })

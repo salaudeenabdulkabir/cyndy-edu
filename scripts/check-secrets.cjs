@@ -2,7 +2,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { loadEnvConfig } = require('@next/env')
 loadEnvConfig(process.cwd(), false, { info() {}, error() {} })
-const ignored = new Set(['node_modules', '.next', '.next-dev', '.next-staging', '.git', '.vercel', '.codex', '.agents', 'coverage', 'mnt'])
+const ignored = new Set(['node_modules', '.next', '.next-dev', '.next-staging', '.next-redesign', '.git', '.vercel', '.codex', '.agents', 'coverage', 'mnt'])
 const secretValues = Object.entries(process.env).filter(([key, value]) => /SECRET|TOKEN|DATABASE_URL|API_KEY|ADMIN_PIN_HASH/.test(key) && !key.startsWith('NEXT_PUBLIC_') && value?.length > 15)
   .flatMap(([key, value]) => { if (!key.startsWith('DATABASE_URL')) return [value]; try { const password = new URL(value).password; return password.length > 8 ? [value, password] : [] } catch { return [] } }).filter(value => value.length > 15)
 const patterns = [/(?:sk_(?:live|test)_|re_)[A-Za-z0-9_-]{25,}/, /postgres(?:ql)?:\/\/[^\s:]+:[^\s@]{8,}@/, /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/]
@@ -24,5 +24,21 @@ for (const file of files) {
     console.error('Potential secret in ' + file + ' (value withheld)'); failed = true
   }
 }
-console.log(failed ? 'Secret check FAILED' : 'Secret check passed for ' + files.length + ' publishable text files')
+// Bundled dependencies contain token-shaped examples; check actual private values
+// in browser bundles rather than applying source regexes to generated vendor code.
+function checkClientBundles(dir) {
+  if (!fs.existsSync(dir)) return
+  for (const item of fs.readdirSync(dir,{withFileTypes:true})) {
+    const filename=path.join(dir,item.name)
+    if(item.isDirectory()) checkClientBundles(filename)
+    else if(item.name.endsWith('.js')) {
+      const contents=fs.readFileSync(filename,'utf8')
+      if(secretValues.some(value=>contents.includes(value))) {
+        console.error('Private configuration found in browser bundle '+filename+' (value withheld)');failed=true
+      }
+    }
+  }
+}
+for (const dir of ['.next','.next-dev','.next-staging','.next-redesign']) checkClientBundles(path.join(dir,'static'))
+console.log(failed ? 'Secret check FAILED' : 'Secret check passed for ' + files.length + ' publishable text files and available browser bundles')
 process.exitCode = failed ? 1 : 0

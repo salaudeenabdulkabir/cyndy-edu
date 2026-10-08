@@ -1,8 +1,10 @@
 'use client'
+import { usePortalFetch } from '@/lib/use-portal-fetch'
+import OpportunityManager from '../opportunity-manager'
 import DocumentManager from '../document-manager'
 import PackageEditor from '../package-editor'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Check, CircleDollarSign, FileText, LoaderCircle, LogOut, Search, UserPlus, Users, X } from 'lucide-react'
 import { useClerk } from '@clerk/nextjs'
 import CatalogManager from '../catalog-manager'
@@ -43,12 +45,13 @@ interface AdminWorker extends WorkerOption { email: string | null; lastSeen: str
 interface AdminClient { id: string; packageId: string | null; firstName: string | null; lastName: string | null; email: string | null; phone: string | null; joinedAt: string | null; totalApplications: number | null; amountPaid: string | null; currency: string | null; paymentConfirmed: boolean | null; applicationCount: number }
 
 export default function AdminDashboard() {
+  const fetch = usePortalFetch()
   const { signOut } = useClerk()
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [updatingId, setUpdatingId] = useState('')
-  const [activeTab, setActiveTab] = useState<'payments' | 'catalog' | 'applications' | 'workers' | 'clients' | 'documents'>('payments')
+  const [activeTab, setActiveTab] = useState<'opportunities' | 'payments' | 'catalog' | 'applications' | 'workers' | 'clients' | 'documents'>('payments')
   const [applications, setApplications] = useState<AdminApplication[]>([])
   const [workers, setWorkers] = useState<WorkerOption[]>([])
   const [applicationLoading, setApplicationLoading] = useState(false)
@@ -65,7 +68,7 @@ export default function AdminDashboard() {
   const [clientSearch, setClientSearch] = useState('')
   const [clientPayment, setClientPayment] = useState('all')
 
-  const loadReceipts = async () => {
+  const loadReceipts = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -78,11 +81,11 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [fetch])
 
   useEffect(() => {
     void loadReceipts()
-  }, [])
+  }, [loadReceipts])
 
   const updateReceipt = async (receiptId: string, action: 'confirm' | 'reject') => {
     const reason = action === 'reject' ? window.prompt('Why is this receipt being rejected?')?.trim() : undefined
@@ -216,13 +219,13 @@ export default function AdminDashboard() {
       <section className="mx-auto max-w-6xl px-6 py-10">
         <div className="mb-8 flex gap-2 overflow-x-auto border-b border-border">
           <button type="button" onClick={() => setActiveTab('payments')} className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeTab === 'payments' ? 'border-gold text-navy' : 'border-transparent text-text-secondary'}`}>Payments</button>
-          <button type="button" onClick={() => setActiveTab('catalog')} className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeTab === 'catalog' ? 'border-gold text-navy' : 'border-transparent text-text-secondary'}`}>Countries &amp; Programs</button>
+          <button type="button" onClick={() => setActiveTab('opportunities')} className="px-4 py-3 text-sm font-semibold">Opportunities &amp; Payments</button><button type="button" onClick={() => setActiveTab('catalog')} className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeTab === 'catalog' ? 'border-gold text-navy' : 'border-transparent text-text-secondary'}`}>Countries &amp; Programs</button>
           <button type="button" onClick={() => { setActiveTab('applications'); void loadApplications() }} className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeTab === 'applications' ? 'border-gold text-navy' : 'border-transparent text-text-secondary'}`}>Applications</button>
           <button type="button" onClick={() => { setActiveTab('workers'); void loadWorkers() }} className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeTab === 'workers' ? 'border-gold text-navy' : 'border-transparent text-text-secondary'}`}>Workers</button>
           <button type="button" onClick={() => { setActiveTab('clients'); void loadClients() }} className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeTab === 'clients' ? 'border-gold text-navy' : 'border-transparent text-text-secondary'}`}>Clients</button>
         </div>
-        <div className="mb-5 flex gap-5 text-sm"><button type="button" onClick={() => setActiveTab('documents')} className="underline">Document checklist</button><a href="/api/admin/export" className="underline">Export applications (CSV)</a><a href="/admin/audit" className="underline">Audit records</a><a href="/notifications" className="underline">Notifications</a></div>
-        {activeTab === 'documents' ? <DocumentManager /> : activeTab === 'catalog' ? <CatalogManager /> : activeTab === 'clients' ? <section>
+        <div className="mb-5 flex flex-wrap gap-x-5 gap-y-3 text-sm"><button type="button" onClick={() => setActiveTab('documents')} className="underline">Document checklist</button><a href="/api/admin/export" className="underline">Export applications (CSV)</a><a href="/admin/audit" className="underline">Audit records</a><a href="/notifications" className="underline">Notifications</a></div>
+        {activeTab === 'opportunities' ? <OpportunityManager /> : activeTab === 'documents' ? <DocumentManager /> : activeTab === 'catalog' ? <CatalogManager /> : activeTab === 'clients' ? <section>
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-gold">Clients &amp; packages</p><h1 className="mt-2 font-heading text-4xl font-bold text-navy">Client directory</h1><p className="mt-2 text-text-secondary">Review client accounts, packages, and payment status.</p>
           <div className="mt-8 grid gap-3 sm:grid-cols-[1fr_220px]"><label className="relative"><Search className="absolute left-3 top-3 text-text-secondary" size={17} strokeWidth={1.5} /><input value={clientSearch} onChange={(event) => setClientSearch(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void loadClients() }} placeholder="Search name or email" className="w-full pl-10" /></label><select value={clientPayment} onChange={(event) => { setClientPayment(event.target.value); void loadClients(event.target.value) }} aria-label="Filter clients by payment"><option value="all">All payment statuses</option><option value="confirmed">Payment confirmed</option><option value="pending">Payment pending</option></select></div>
           {clientLoading ? <div className="mt-6 flex items-center justify-center border border-border bg-white py-16 text-text-secondary"><LoaderCircle className="mr-2 animate-spin" size={18} /> Loading clients...</div> : clients.length === 0 ? <div className="mt-6 border border-border bg-white py-16 text-center"><Users className="mx-auto text-text-secondary" size={32} /><h2 className="mt-4 font-heading text-2xl font-bold text-navy">No clients found</h2><p className="mt-2 text-sm text-text-secondary">Registered clients will appear here.</p></div> : <div className="mt-6 overflow-x-auto border border-border bg-white"><table className="min-w-[850px] w-full text-left"><thead className="border-b border-border bg-gray-50 text-xs uppercase tracking-wide text-text-secondary"><tr><th className="px-4 py-3">Client</th><th className="px-4 py-3">Package</th><th className="px-4 py-3">Applications</th><th className="px-4 py-3">Payment</th><th className="px-4 py-3">Joined</th></tr></thead><tbody>{clients.map((client) => <tr key={`${client.id}-${client.packageId ?? 'none'}`} className="border-b border-border last:border-0"><td className="px-4 py-4 text-sm font-semibold text-navy">{client.firstName} {client.lastName}<p className="font-normal text-text-secondary">{client.email}</p></td><td className="px-4 py-4 text-sm text-text-secondary">{client.totalApplications ?? 0} applications{client.amountPaid ? <p>{client.currency ?? ''} {client.amountPaid}</p> : null}<PackageEditor clientId={client.id} initialTotal={client.totalApplications ?? 1} onSaved={() => void loadClients()} /></td><td className="px-4 py-4 text-sm text-text-secondary">{client.applicationCount}</td><td className={`px-4 py-4 text-sm font-semibold ${client.paymentConfirmed ? 'text-success' : 'text-warning'}`}>{client.paymentConfirmed ? 'Confirmed' : 'Pending'}</td><td className="px-4 py-4 text-sm text-text-secondary">{client.joinedAt ? new Date(client.joinedAt).toLocaleDateString() : '—'}</td></tr>)}</tbody></table></div>}

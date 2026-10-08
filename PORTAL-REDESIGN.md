@@ -1,0 +1,95 @@
+# Opportunity portal redesign
+
+This feature is on `codex/portal-opportunity-redesign`. It has not replaced the existing Render deployment.
+
+## Open the local preview
+
+1. From the project folder, run `node scripts/start-redesign.cjs`.
+2. Open `http://localhost:3002/sign-in` and use your existing test applicant account.
+3. The dashboard is `http://localhost:3002/opportunities`.
+4. Admins use `http://localhost:3002/admin/login`, with their existing Clerk account and admin PIN. No new passwords are created by this feature.
+
+The runner reads the ignored `.env.redesign.local` for the isolated database, uses the private staging document bucket, and disables email delivery. Do not commit environment files or copy staging credentials into public code.
+
+The demo opportunity is explicitly named **PREVIEW ONLY: Study opportunity — do not pay**. Its Nigeria/Ghana prices and bank instructions are fictitious. Never transfer money to test this preview. The uploaded PDF is labelled test-only. Existing applications on the online staging site have not been modified.
+
+## Applicant screens
+
+| Screen | What the applicant can do |
+| --- | --- |
+| Opportunities | Search open courses, schools and destinations; choose the country they are paying from; read the fee and document checklist. Unsupported payment countries link to support. |
+| My applications | Open each application separately and see its reference, form progress, payment status and deadline. |
+| Opportunity & Payment | View the saved fee, currency, account instructions and reference; upload one receipt for this application; type a preferred course. |
+| Personal Information | Enter personal details and upload configured identity documents. |
+| Education Background | Type previously studied courses and qualifications; upload transcripts and certificates here. |
+| Languages & Tests | Enter languages/proficiency and upload configured English-language evidence. SAT/GRE/GMAT belong to the separate admissions-test document group. |
+| Other Documents | Upload admissions-test and other supporting documents. |
+| Review & Submit | See missing form sections, documents and payment confirmation. Final submission stays locked until requirements are satisfied. Existing policy safeguards still apply. |
+| Support | Contact Cyndy about missing documents, choosing opportunities or payments. |
+
+The seven main steps are Opportunity & Payment, Personal & Family, Academic Background, Experience, Languages, Other Documents, and Review & Submit. Guardians are under Personal & Family; research is under Academic Background. Work, awards, publications, teaching, certifications, volunteering, leadership and associations are grouped under Experience, keeping their existing saved answers. Desktop navigation is on the left. Mobile uses a labeled **Sections** button opening a left drawer. **Save and continue** saves before navigating; failed saves remain visible and can be retried.
+
+## Set up a real opportunity
+
+1. Open admin **Opportunities & Payments → Create an opportunity**. Type a name such as Chevening, Erasmus Mundus or Stipendium Hungaricum; no school/country catalog setup is needed.
+2. Add the type, description/eligibility, optional destinations, school/consortium, study level and deadline. Start with **Draft**. Use **Edit opportunity** to change details or close it later; closing preserves existing applications and payments.
+3. Select the saved opportunity under **Country price & bank account**, then choose the **country the applicant pays from**. This is separate from the study destination.
+4. Enter the service fee and three-letter currency code, for example NGN, GHS, USD or GBP. No automatic currency conversion occurs.
+5. Enter the bank name, account holder, account number and payment instructions. Explain exactly what the service fee covers and any separate institution fees.
+6. Select **Publish this country price**, then save. Repeat for every supported payer country. A country without a published fee cannot proceed to checkout.
+7. In **Document checklist**, create or edit each requirement. Choose its form section. Use global requirements sparingly; assign opportunity-specific documents and mark them mandatory or optional.
+8. Edit the opportunity and set its status to **Open** when prices and documents are ready. Draft, closed and expired opportunities cannot receive new purchases. Check the applicant view before sharing the opportunity. Real prices and bank accounts must come from the business; the demo values are not launch defaults.
+
+Existing global requirements still apply. In particular, the old catalog contains a global document named **Receipt**. Review this configuration before rollout: the new payment receipt has its own upload and should not also be required as an academic/supporting document. Changing a global requirement affects drafts, so check legacy applications before changing its scope.
+
+## Review payments
+
+1. Open admin **Opportunities & Payments → Review opportunity payments**.
+2. Open the private receipt and verify the actual transfer independently. An uploaded receipt is not proof that money arrived.
+3. Confirm only that application's payment, or reject with a clear reason. Applicants can upload a replacement after rejection.
+4. Confirmation does not unlock other applications. Existing package payments remain in the old payment tab and cannot unlock new opportunity purchases.
+
+One applicant can select several opportunities. Each has its own application, receipt and payment status. Repeated selection of the same opportunity reopens the existing application rather than creating a duplicate charge. The selected country, fee, currency and account instructions are saved with the application; later catalog edits do not alter that quote. Applicants who chose the wrong payment country should contact support before paying.
+
+## Missing documents and waivers
+
+Applicants may save and continue with missing documents. Only an admin who has passed PIN verification can waive a requirement. In **Opportunities & Payments → Waive a document requirement**, select the draft application, document and reason. The approver, reason and date are recorded; the waiver does not apply to other applications. The client checklist shows **Waived by admin**.
+
+## Environments and rollout
+
+- Current online staging remains `https://cyndy-edu-staging.onrender.com` on its existing database and code.
+- Local redesign database: Neon branch `portal-opportunity-redesign-2026-09-27` (`br-autumn-thunder-aezrzyq9`).
+- Clean migration verification: `portal-redesign-migration-check-2026-09-27` (`br-mute-resonance-ae3waebw`). Both were branched from launch staging, not modified in place.
+- Migrations: `lib/db/migrations/0003_opportunities.sql` adds atomic checkout, payment auditing and constraints; `0004_standalone_opportunities.sql` makes schools optional, adds opportunity details/status and updates checkout. Both are applied on the isolated redesign database.
+- `scripts/migrate-redesign.cjs` is deliberately restricted to the local redesign endpoint. It refuses other databases and does nothing if the opportunity schema is already installed.
+- The existing databases were migrated manually and do not have a populated Drizzle migration ledger. **Do not blindly run every historical migration against them.** Apply only the reviewed new migration transaction to the intended target after a backup/branch check, or deliberately baseline the migration ledger first.
+- To publish a separate hosted preview, deploy this feature branch with the redesign database URL and existing test identity/storage configuration. Keep email disabled and use the correct allowed app origin. Do not point new code at a database without migrations 0003 and 0004.
+- Before changing the current Render deployment, complete admin browser testing, verify real catalog/payment/document configuration and review the preview. A code rollback must keep the additive tables and data available; do not delete orders to roll back the UI.
+
+## Verification
+
+Run `npm test`, `npm run typecheck`, `npm run lint` and `npm run build`.
+
+`scripts/test-redesign.sql` checks duplicate checkout, independent applications, immutable price/account snapshots, payment isolation, notifications and application-specific waivers. Its fixtures roll back through a caught subtransaction exception. Run it only against an isolated test branch.
+
+Receipt and document storage stay private. Session tokens are refreshed for the new UI's API calls and restricted to same-origin `/api/` destinations. Server-side checks remain authoritative for ownership, admin PIN access, accepted file signatures, mandatory documents, payment and submission status.
+
+## Follow-up usability checks
+
+- Review & Submit lists each missing required document and links back to its upload section. Optional documents do not count as missing requirements. Personal-information validation matches the server, including email format.
+- Document checklist shows existing opportunity assignments and their required/optional settings. Editing restores the current assignment; selecting another opportunity adds an assignment, keeping existing links. Shared document wording/placement changes affect every linked opportunity.
+- Worker, status and staff sign-in requests use the same refreshed-session API helper as the applicant wizard. Worker document links remain available after reviewing documents or saving notes.
+- Payment screens spell out the payer country and label the fee as Cyndy application assistance.
+- Support is public so applicants can contact the business even when they cannot sign in.
+
+### Remaining hands-on acceptance checks
+
+Use test accounts and labelled dummy files only on localhost:3002. Keep private credentials out of chat.
+
+1. Applicant: select an open test opportunity, verify the fee for the paying country, upload a dummy receipt, save academic/personal details and confirm they survive refresh.
+2. Admin: verify the dummy receipt, then check only that application's payment becomes confirmed. Reject a separate test receipt and verify replacement is possible.
+3. Applicant: check academic/language uploads in their sections; Review & Submit should name missing documents and take you to the right section. A waived requirement should stop blocking submission.
+4. Worker: sign in with a test worker account, complete the required password change personally, verify only assigned applications are listed, save notes and review a dummy document. Its download link should remain usable.
+5. Mobile: at 390 px, check the applicant Sections drawer, all seven steps, receipt upload, document upload, and review links; confirm no page-wide horizontal scrolling.
+
+The latest code/build tests pass, but this final signed-in browser walkthrough remains pending. Local submission is still gated by the existing legal-policy configuration; this has not been bypassed. Public launch also requires approved real prices, bank details and policy terms.

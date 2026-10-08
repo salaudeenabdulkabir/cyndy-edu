@@ -2,7 +2,7 @@ import { clerkMiddleware, createRouteMatcher, clerkClient } from '@clerk/nextjs/
 import { NextResponse } from 'next/server'
 import { hasAdminSession } from '@/lib/admin-session'
 import { isAllowedRequestOrigin } from '@/lib/request-origin'
-const publicRoute = createRouteMatcher(['/', '/contact', '/offline.html', '/api/jobs/notifications', '/api/health', '/api/webhooks/clerk', '/sign-in(.*)', '/sign-up(.*)', '/worker/login', '/admin/login', '/privacy-policy', '/terms-of-service', '/manifest.json', '/sw.js', '/icons(.*)'])
+const publicRoute = createRouteMatcher(['/', '/contact', '/support', '/offline.html', '/robots.txt', '/api/jobs/notifications', '/api/health', '/api/webhooks/clerk', '/sign-in(.*)', '/sign-up(.*)', '/worker/login', '/admin/login', '/privacy-policy', '/terms-of-service', '/manifest.json', '/sw.js', '/icons(.*)'])
 export default clerkMiddleware(async (auth, req) => {
   const path = req.nextUrl.pathname
   if (req.method !== 'GET' && req.method !== 'HEAD' && !path.startsWith('/api/webhooks/')) {
@@ -17,7 +17,7 @@ export default clerkMiddleware(async (auth, req) => {
     const role = user.publicMetadata.role || 'client'
     if (path.startsWith('/admin') && (role !== 'admin' || !await hasAdminSession(sessionId))) return NextResponse.redirect(new URL('/admin/login', req.url))
     if (path.startsWith('/worker') && role !== 'worker' && role !== 'admin') return NextResponse.redirect(new URL('/apply', req.url))
-    if ((path.startsWith('/apply') || path.startsWith('/status')) && role !== 'client') return NextResponse.redirect(new URL(role === 'admin' ? '/admin' : '/worker', req.url))
+    if ((path.startsWith('/apply') || path.startsWith('/status') || path.startsWith('/opportunities')) && role !== 'client') return NextResponse.redirect(new URL(role === 'admin' ? '/admin' : '/worker', req.url))
   }
   const response = NextResponse.next()
   response.headers.set('Cache-Control', 'private, no-store, max-age=0')
